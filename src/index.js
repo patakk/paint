@@ -301,7 +301,6 @@ function onDocumentMouseMove(event) {
     rx = mx*winScale;
     ry = my*winScale;
     //console.log((mx)/baseWidth/winScale*1000)
-    pixelData = paletteCanvas.getContext('2d').getImageData(rx, ry, 1, 1).data;
     //points.material.uniforms.u_diffuse.value = [pixelData[0]/255., pixelData[1]/255., pixelData[2]/255., 1.];
 
     //points.material.uniforms.u_diffuse.value = [mmm[0], mmm[1], mmm[2], 1.0];
@@ -318,7 +317,6 @@ function onDocumentMouseMove(event) {
         var x = x1 + p*(x2 - x1);
         var y = y1 + p*(y2 - y1);
 
-        //pixelData = paletteCanvas.getContext('2d').getImageData(((x-300)/baseWidth/winScale*1000), ((y)/baseHeight/winScale*1000), 1, 1).data;
         //points.material.uniforms.u_diffuse.value = [pixelData[0]/255., pixelData[1]/255., pixelData[2]/255., 1.];
 
         points.material.uniforms.u_time.value = frameCount*1.0;
@@ -888,47 +886,6 @@ function reset(){
     }*/
 
     //groundclr.a[3] = 0;
-    var rx, ry;
-    var pixelData;
-    rx = fxrand()*33+128;
-    ry = fxrand()*33+128;
-    pixelData = paletteCanvas.getContext('2d').getImageData(rx, ry, 1, 1).data;
-    if(fxrand()<-1.5) groundclr.a = [pixelData[0], pixelData[1], pixelData[2], 255];
-    rx += fxrand()*88-44;
-    ry += fxrand()*88-44;
-    pixelData = paletteCanvas.getContext('2d').getImageData(rx, ry, 1, 1).data;
-    if(fxrand()<-1.5) groundclr.b = [pixelData[0], pixelData[1], pixelData[2], 255*(fxrand()<2.5)];
-    rx += fxrand()*88-44;
-    ry += fxrand()*88-44;
-    pixelData = paletteCanvas.getContext('2d').getImageData(rx, ry, 1, 1).data;
-    if(fxrand()<-1.5) groundclr.c = [pixelData[0], pixelData[1], pixelData[2], 255*(fxrand()<2.5)];
-
-    rx += fxrand()*33-16;
-    ry += fxrand()*33-16;
-    pixelData = paletteCanvas.getContext('2d').getImageData(rx, ry, 1, 1).data;
-    if(fxrand()<-1.5) skyclr.a = [pixelData[0], pixelData[1], pixelData[2], 255];
-    rx += fxrand()*33-16;
-    ry += fxrand()*33-16;
-    pixelData = paletteCanvas.getContext('2d').getImageData(rx, ry, 1, 1).data;
-    if(fxrand()<-1.5) skyclr.b = [pixelData[0], pixelData[1], pixelData[2], 188];
-    rx += fxrand()*33-16;
-    ry += fxrand()*33-16;
-    pixelData = paletteCanvas.getContext('2d').getImageData(rx, ry, 1, 1).data;
-    if(fxrand()<-1.5) skyclr.c = [pixelData[0], pixelData[1], pixelData[2], 188];
-    
-    rx += fxrand()*66-36;
-    ry += fxrand()*66-36;
-    pixelData = paletteCanvas.getContext('2d').getImageData(rx, ry, 1, 1).data;
-    if(fxrand()<-1.5) treeclr.a = [pixelData[0], pixelData[1], pixelData[2], 255];
-    rx += fxrand()*66-36;
-    ry += fxrand()*66-36;
-    pixelData = paletteCanvas.getContext('2d').getImageData(rx, ry, 1, 1).data;
-    if(fxrand()<-1.5) treeclr.b = [pixelData[0], pixelData[1], pixelData[2], 188];
-    rx += fxrand()*66-36;
-    ry += fxrand()*66-36;
-    pixelData = paletteCanvas.getContext('2d').getImageData(rx, ry, 1, 1).data;
-    if(fxrand()<-1.5) treeclr.c = [pixelData[0], pixelData[1], pixelData[2], 255];
-
     //resizeCanvas(ww, wh, true);
     //pg = createGraphics(ww, wh);
 
@@ -1031,7 +988,6 @@ function loadData(){
 
     var rx = fxrand()*256;
     var ry = fxrand()*256;
-    var pixelData = paletteCanvas.getContext('2d').getImageData(rx, ry, 1, 1).data;
     //backgroundColor = [pixelData[0]/255., pixelData[1]/255., pixelData[2]/255.];
 
     //scene.fog = new THREE.Fog( 0x050505, 2000, 3500 );
@@ -1174,7 +1130,6 @@ function loadData(){
         var pixelData;
         rx = mx;
         ry = my;
-        pixelData = paletteCanvas.getContext('2d').getImageData(rx, ry, 1, 1).data;
         
         points.material.uniforms.u_diffuse.value = [mmm[0], mmm[1], mmm[2], 1.0];
         //points.material.uniforms.u_diffuse.value = [pixelData[0]/255., pixelData[1]/255., pixelData[2]/255., 1.];
@@ -1335,15 +1290,6 @@ window.onresize = windowResized;
 window.onclick = mouseClicked;
 window.onwheel = scroll;
 
-/*var paletteImg = new Image();
-paletteImg.src = './assets/nyc.png';
-paletteImg.onload = function () {
-    paletteCanvas = document.createElement('canvas');
-    paletteCanvas.width = paletteImg.width;
-    paletteCanvas.height = paletteImg.height;
-    paletteCanvas.getContext('2d').drawImage(paletteImg, 0, 0, paletteImg.width, paletteImg.height);
-    reset();
-}*/
 
 const PERLIN_YWRAPB = 4;
 const PERLIN_YWRAP = 1 << PERLIN_YWRAPB;
@@ -1470,3 +1416,6 @@ var noiseSeed = function(seed) {
     perlin[i] = lcg.rand();
   }
 };
+
+
+reset();
