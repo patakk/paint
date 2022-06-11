@@ -1432,7 +1432,7 @@ function midcube(){
 }
 
 function animate() {
-    renderer.setClearColor( 0x929292, 1 );
+    renderer.setClearColor( 0x989898, 1 );
     renderer.clear();
     //requestAnimationFrame(animate);
     if(renderer && false){
@@ -1869,9 +1869,9 @@ function loadData(){
     //luminosityPass = new ShaderPass( PostProcShader );
     //composer.render();
     renderer.setRenderTarget(renderTarget);
-    renderer.setClearColor( 0x929292, 1 );
+    renderer.setClearColor( 0x989898, 1 );
     renderer.render(scene, camera);
-    renderer.setClearColor( 0x929292, 1 );
+    renderer.setClearColor( 0x989898, 1 );
     renderer.clear();
     //requestAnimationFrame(animate);
     //animate();
@@ -2034,7 +2034,7 @@ function windowResized() {
         //renderer.setPixelRatio( 1.0000 );
         renderer.setSize( canvasWidth, canvasHeight );
     
-        //renderer.setClearColor( 0x929292, 1 );
+        //renderer.setClearColor( 0x989898, 1 );
         //renderer.clear();
         //renderer.domElement.id = "cnvs";
         //renderer.domElement.style.position = "absolute";
