@@ -1,8 +1,10 @@
 import * as THREE from 'three';
 
+
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
+import ClipperLib from 'js-clipper';
 
 const PostProcShader = {
     uniforms: {
@@ -13,7 +15,10 @@ const PostProcShader = {
             value: [500, 500]
         },
         'ztime': {
-            value: 0.0
+            value: fxrand()
+        },
+        'flip': {
+            value: fxrandom(0, 4)
         },
         'seed1': {
             value: fxrandom(.9, 1.1)
@@ -25,115 +30,30 @@ const PostProcShader = {
             value: fxrandom(.5, 1.5)
         },
     },
-    vertexShader:
-/* glsl */
-`
-
-    varying vec2 vUv;
-
-    void main() {
-
-        vUv = uv;
-
-        gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
-
-    }`,
-    fragmentShader:
-/* glsl */
-`
-
-    #include <common>
-
-    uniform sampler2D tDiffuse;
-    uniform vec2 resolution;
-    uniform float ztime;
-    uniform float seed1;
-    uniform float seed2;
-    uniform float seed3;
-
-    varying vec2 vUv;
-
-    //uniform float sigma;     // The sigma value for the gaussian function: higher value means more blur
-                         // A good value for 9x9 is around 3 to 5
-                         // A good value for 7x7 is around 2.5 to 4
-                         // A good value for 5x5 is around 2 to 3.5
-                         // ... play around with this based on what you need :)
-
-    //uniform float blurSize;  // This should usually be equal to
-                            // 1.0f / texture_pixel_width for a horizontal blur, and
-                            // 1.0f / texture_pixel_height for a vertical blur.
-
-    const float pi = 3.14159265f;
-
-    const float numBlurPixelsPerSide = 4.0f;
- 
-
-    vec4 blur(vec2 coor, float blurSize, vec2 direction){
-        float sigma = 3.0;
-        // Incremental Gaussian Coefficent Calculation (See GPU Gems 3 pp. 877 - 889)
-        vec3 incrementalGaussian;
-        incrementalGaussian.x = 1.0f / (sqrt(2.0f * pi) * sigma);
-        incrementalGaussian.y = exp(-0.5f / (sigma * sigma));
-        incrementalGaussian.z = incrementalGaussian.y * incrementalGaussian.y;
-      
-        vec4 avgValue = vec4(0.0f, 0.0f, 0.0f, 0.0f);
-        float coefficientSum = 0.0f;
-      
-        // Take the central sample first...
-        avgValue += texture2D(tDiffuse, coor.xy) * incrementalGaussian.x;
-        coefficientSum += incrementalGaussian.x;
-        incrementalGaussian.xy *= incrementalGaussian.yz;
-      
-        // Go through the remaining 8 vertical samples (4 on each side of the center)
-        for (float i = 1.0f; i <= numBlurPixelsPerSide; i++) { 
-          avgValue += texture2D(tDiffuse, coor.xy - i * blurSize * 
-                                direction) * incrementalGaussian.x;         
-          avgValue += texture2D(tDiffuse, coor.xy + i * blurSize * 
-                                direction) * incrementalGaussian.x;         
-          coefficientSum += 2. * incrementalGaussian.x;
-          incrementalGaussian.xy *= incrementalGaussian.yz;
-        }
-      
-        return avgValue / coefficientSum;
-    }
-
-    void main() {
-
-        vec2 xy = gl_FragCoord.xy;
-        vec2 uv = xy / resolution;
-        
-        float qq = pow(2.*abs(uv.x-.5), 2.)*.84;
-
-        qq = pow(length((uv - .5)*vec2(.72,1.))/length(vec2(.5)), 2.) * .94;
-
-        vec2 dir = uv - .5;
-        dir = vec2(dir.y, -dir.x);
-        dir = dir / length(dir);
-
-        vec4 texelB = blur(uv, qq*3.3*1./resolution.x, dir);
-
-        //float lum = texelB.r * 0.3 + texelB.g * 0.59 + texelB.b * 0.11;
-        //lum = pow(lum, 0.15);
-        //vec4 texelGray = vec4(vec3( lum ), 1.0);
-        //texelGray = texelGray*0.5 + texelB*0.5;
-
-        //vec4 texel = texture2D( tDiffuse, (xy+vec2(+0.0, +0.0)) / resolution );
-        //vec4 texel0 = texture2D( tDiffuse, vec2(.5) );
-
-        //vec4 res = texelB*(1.-qq) + texelGray*qq + .0*(-.5+rand(xy*.1));
-        //texelB.r = pow(texelB.r, seed1);
-        //texelB.g = pow(texelB.g, seed2);
-        //texelB.b = pow(texelB.b, seed3);
-        //float pp = (texelB.x+texelB.y+texelB.z)/3.;
-        //texelB.x = texel.x + .2*(pp-texel.x);
-        //texelB.y = texel.y + .2*(pp-texel.y);
-        //texelB.z = texel.z + .2*(pp-texel.z);
-        vec4 res = texelB + .059*(-.5+rand(xy*.1+mod(ztime*.031, 2.0)));
-
-        gl_FragColor = vec4( res.rgb, 1.0 );
-
-    }`
+    vertexShader: null,
+    fragmentShader: null,
 };
+
+
+function shuffle(array) {
+    let currentIndex = array.length
+    var randomIndex;
+
+  
+    // While there remain elements to shuffle.
+    while (currentIndex != 0) {
+  
+      // Pick a remaining element.
+      randomIndex = Math.floor(fxrand() * currentIndex);
+      currentIndex--;
+  
+      // And swap it with the current element.
+      [array[currentIndex], array[randomIndex]] = [
+        array[randomIndex], array[currentIndex]];
+    }
+  
+    return array;
+  }
 // note about the fxrand() function 
 // when the "fxhash" is always the same, it will generate the same sequence of
 // pseudo random numbers, always
@@ -157,7 +77,7 @@ var vShader, fShader;
 var loaded = false;
 
 var points;
-var ress = 1000;
+var ress = 1400;
 var baseWidth = 1;
 var baseHeight = 1;
 var canvasWidth = 1;
@@ -337,7 +257,7 @@ function onDocumentMouseMove(event) {
     renderer.render(finalscene, camera);
 }
 
-function drawLine(p1, p2, spread, pscale, color, distortion){
+function drawLine(p1, p2, spread, pscale, color, distortion, individual=0){
 
     var x1 = p1.x;
     var y1 = p1.y;
@@ -353,13 +273,17 @@ function drawLine(p1, p2, spread, pscale, color, distortion){
     for(var k = 0; k < parts; k++){
         var p = map(k, 0, parts, 0, 1);
         var env = Math.pow(1-2*Math.abs(p-.5), 1./6);
-        var nzx = env*distortion*(-.5+power(noise(k*.005+frameCount*.0004, x1*.04+y1*.5522), 4));
-        var nzy = env*distortion*(-.5+power(noise(k*.005+frameCount*.0004, x1*.04+y1*.2855), 4));
-        var xx = x1 + p*(x2 - x1) + nzx;
-        var yy = y1 + p*(y2 - y1) + nzy;
+        //var nzx = env*distortion*(-.5+power(noise(k*.005+frameCount*.0004, x1*.04+y1*.5522), 4));
+        //var nzy = env*distortion*(-.5+power(noise(k*.005+frameCount*.0004, x1*.04+y1*.2855), 4));
+        var xx = x1 + p*(x2 - x1);
+        var yy = y1 + p*(y2 - y1);
+        var nzx = 2*(1+0*(individual>0))*distortion*(-.5+power(noise(xx*.003+yy*.003, individual+113.31), 4));
+        var nzy = 2*(1+0*(individual>0))*distortion*(-.5+power(noise(xx*.003+yy*.003, individual+225.66), 4));
+        xx += nzx;
+        yy += nzy;
 
         points.material.uniforms.u_time.value = frameCount*1.0;
-        points.material.uniforms.u_spread.value = 1 + 15*spread + spread*22*power(noise(k*.003, y1*31.31), 4);
+        points.material.uniforms.u_spread.value = 1 + 20*spread + spread*10*power(noise(individual, yy*.0041), 4);
         points.material.uniforms.u_scrollscale.value = pscale;
         points.material.uniforms.u_mouse.value = [xx, -yy];
         renderer.render(scene, camera);
@@ -444,35 +368,43 @@ function drawCube(x, y, w, h, angle, shrt, hue, distortion){
     var pscale = fxrandom(.4, .99);
     var spread = fxrandom(.4, .99);
 
-    var mmm;
-    console.log(hue)
-    mmm = HSVtoRGB((hue+fxrandom(.01, .02))%1., fxrandom(.66, .74), fxrandom(.56, .6));
-    fillQuad(pm5, pm6, pm2, pm1, spread, pscale, mmm, distortion);
+    var color;
+    var satsca = 1;
+    if(hue > .62){
+        satsca *= .65;
+    }
+    var bri = fxrandom(.80, .92);
+    color = HSVtoRGB((hue+fxrandom(-.05, .05)+1.)%1., fxrandom(.4, .74)*satsca, bri + fxrandom(-.1, .1)*.8);
+    fillQuad(pm5, pm6, pm2, pm1, spread, pscale, color, distortion);
 
-    mmm = HSVtoRGB((hue+fxrandom(.01, .02))%1., fxrandom(.66, .74), fxrandom(.56, .6));
-    fillQuad(pm2, pm6, pm7, pm3, spread, pscale, mmm, distortion);
+    color = HSVtoRGB((hue+fxrandom(-.05, .05)+1.)%1., fxrandom(.4, .74)*satsca, bri + fxrandom(-.1, .1)*.8);
+    fillQuad(pm2, pm6, pm7, pm3, spread, pscale, color, distortion);
     
     //infill front
-    mmm = HSVtoRGB((hue+fxrandom(.01, .02))%1., fxrandom(.66, .74), fxrandom(.56, .6));
-    fillQuad(pm1, pm2, pm3, pm4, spread, pscale, mmm, distortion);
+    color = HSVtoRGB((hue+fxrandom(-.05, .05)+1.)%1., fxrandom(.4, .74)*satsca, bri + fxrandom(-.1, .1)*.8);
+    fillQuad(pm1, pm2, pm3, pm4, spread, pscale, color, distortion);
 
-    mmm[1] = (mmm[1]*1.4)%1.;
-    mmm[2] = mmm[2]*.5;
+    
+    color = HSVtoRGB((hue+fxrandom(-.05, .05)+1.)%1., fxrandom(.4, .74)*satsca, bri + fxrandom(-.1, .1)*.8);
     spread = spread*.3;
+
+    if(fxrand() < 2){
+        //color = HSVtoRGB((hue+fxrandom(-.05, .05)+1.)%1., fxrandom(.6, .94)*satsca, fxrandom(.46, .67));
+    }
     // outline
-    drawLine(p1, p2, spread, pscale, mmm, distortion);
-    drawLine(p2, p3, spread, pscale, mmm, distortion);
-    drawLine(p3, p4, spread, pscale, mmm, distortion);
-    drawLine(p4, p1, spread, pscale, mmm, distortion);
+    drawLine(p1, p2, spread, pscale, color, distortion);
+    drawLine(p2, p3, spread, pscale, color, distortion);
+    drawLine(p3, p4, spread, pscale, color, distortion);
+    drawLine(p4, p1, spread, pscale, color, distortion);
 
     // kosi bridovi
-    drawLine(p1, p5, spread, pscale, mmm, distortion);
-    drawLine(p2, p6, spread, pscale, mmm, distortion);
-    drawLine(p3, p7, spread, pscale, mmm, distortion);
+    drawLine(p1, p5, spread, pscale, color, distortion);
+    drawLine(p2, p6, spread, pscale, color, distortion);
+    drawLine(p3, p7, spread, pscale, color, distortion);
     
     // zadnji bridovi
-    drawLine(p5, p6, spread, pscale, mmm, distortion);
-    drawLine(p6, p7, spread, pscale, mmm, distortion);
+    drawLine(p5, p6, spread, pscale, color, distortion);
+    drawLine(p6, p7, spread, pscale, color, distortion);
 }
 
 
@@ -509,7 +441,7 @@ function outlineold(cubesinfos, spread, pscale, color, pad, distortion){
     for(var k = 0; k < cubesinfos.length; k++){
         
         var cube = cubesinfos[k];
-        var cubeall = getCubeVertices(cube, 18);
+        var cubeall = getCubeVertices(cube, pad);
 
         drawLine(cubeall.p1, cubeall.p5, spread, pscale, color, distortion);
         drawLine(cubeall.p5, cubeall.p6, spread, pscale, color, distortion);
@@ -521,23 +453,23 @@ function outlineold(cubesinfos, spread, pscale, color, pad, distortion){
 }
 
 function outlineblack(cube, spread, pscale, color, pad, distortion){
-    points.material.uniforms.u_diffuse.value = [color[0], color[1], color[2], 1.0];
+    points.material.uniforms.u_diffuse.value = [color[0], color[1], color[2], .002];
 
     var cubeall = getCubeVertices(cube, pad);
 
-    drawLine(cubeall.p1, cubeall.p2, spread, pscale, color, distortion);
-    drawLine(cubeall.p3, cubeall.p4, spread, pscale, color, distortion);
-    drawLine(cubeall.p2, cubeall.p3, spread, pscale, color, distortion);
-    drawLine(cubeall.p4, cubeall.p1, spread, pscale, color, distortion);
+    if(fxrand() > -.5) drawLine(cubeall.p1, cubeall.p2, spread, pscale, color, distortion);
+    if(fxrand() > -.5) drawLine(cubeall.p3, cubeall.p4, spread, pscale, color, distortion);
+    if(fxrand() > -.5) drawLine(cubeall.p2, cubeall.p3, spread, pscale, color, distortion);
+    if(fxrand() > -.5) drawLine(cubeall.p4, cubeall.p1, spread, pscale, color, distortion);
 
     // kosi bridovi
-    drawLine(cubeall.p1, cubeall.p5, spread, pscale, color, distortion);
-    drawLine(cubeall.p3, cubeall.p7, spread, pscale, color, distortion);
-    drawLine(cubeall.p2, cubeall.p6, spread, pscale, color, distortion);
+    if(fxrand() > -.5) drawLine(cubeall.p1, cubeall.p5, spread, pscale, color, distortion);
+    if(fxrand() > -.5) drawLine(cubeall.p3, cubeall.p7, spread, pscale, color, distortion);
+    if(fxrand() > -.5) drawLine(cubeall.p2, cubeall.p6, spread, pscale, color, distortion);
     
     // zadnji bridovi
-    drawLine(cubeall.p6, cubeall.p7, spread, pscale, color, distortion);
-    drawLine(cubeall.p5, cubeall.p6, spread, pscale, color, distortion);
+    if(fxrand() > -.5) drawLine(cubeall.p6, cubeall.p7, spread, pscale, color, distortion);
+    if(fxrand() > -.5) drawLine(cubeall.p5, cubeall.p6, spread, pscale, color, distortion);
 }
 
 
@@ -599,63 +531,859 @@ function outline(cubesinfos, spread, pscale, color, pad, distortion){
 function cubes(){
     
     
-    var ncubes = Math.round(fxrandom(1, 5));
-    var cubewidth = fxrandom(55, 200);
-    var cubeheight = fxrandom(55, 400);
-    if(cubeheight*cubewidth > 40000){
-        cubewidth = 40000/cubeheight;
+    var bw = fxrand() < .5;
+    var ncubes = Math.round(fxrandom(3, 7));
+    var cubewidth = fxrandom(78, 400)*1.4;
+    var cubeheight = fxrandom(78, 400)*2.4;
+    if(cubeheight*cubewidth > 100000){
+        cubewidth = 100000/cubeheight;
     }
     if(cubewidth * ncubes > canvasWidth*.66){
-        cubewidth = canvasWidth*.66 / ncubes;
+        //cubewidth = canvasWidth*.66 / ncubes;
     }
     var angle = radians(fxrandom(10, 50));
     angle = radians(fxrandom(5, 88));
     var shrt = fxrandom(.1, .5)*0+fxrandom(.4, 1.3)*1;
+    //if(angle > radians(80) && ncubes < 4 && cubewidth < 150)
+    //    shrt = fxrandom(1.7, 2.5);
     var cubesinfos = []
     var cubewidtht = cubewidth;
-    for(var x = -(ncubes-1)/2*cubewidth; x <= (ncubes-1)/2*cubewidth; x += cubewidtht){
+    var minx = 1000000;
+    var miny = 1000000;
+    var maxx = -1000000;
+    var maxy = -1000000;
+    var x = 0;
+    for(var qq = 0; qq < ncubes; qq++){
         
-        cubewidtht = fxrandom(55, 130);
-        var y = fxrandom(-100,100);
+        x = x + cubewidth;
+        var y = fxrandom(-255,255);
         //x = fxrandom(-3, 3);
         //y = fxrandom(-3, 3);
         //cubewidth = fxrandom(55, 400);
         //cubeheight = fxrandom(55, 400);
+        
+        var x = x;
+        var y = y;
+        var w = cubewidtht-10;
+        var h = cubeheight-10;
+        var a = angle;
+        var s = shrt;
         cubesinfos.push({
-            'x': x-cubewidtht*shrt*Math.cos(angle)/2,
-            'y': y-cubewidtht*shrt*Math.sin(angle)/2,
-            'w': cubewidtht-10,
-            'h': cubeheight-10,
-            'a': angle,
-            's': shrt,
+            'x': x,
+            'y': y,
+            'w': w,
+            'h': h,
+            'a': a,
+            's': s,
         });
     }
 
-    var hue = 0.5;
-    var color = HSVtoRGB((hue+fxrandom(.55, .61))%1.0, fxrandom(.1, .6), fxrandom(.2, .5));
-    var pad = 0;
-    var distortion = 22;
 
-    outline(cubesinfos, 2, 2, color, pad, distortion);
+    for(var k = 0; k < cubesinfos.length; k++){
+        //cubesinfos[k].x -= cx/2;
+        //cubesinfos[k].y -= 0*cy;
+        var vs = getCubeVertices(cubesinfos[k], 1)
+        var vvs = [vs.p1, vs.p2, vs.p3, vs.p4, vs.p5, vs.p6, vs.p7]
+        for(var v = 0; v < vvs.length; v++){
+            if(vvs[v].x > maxx) maxx = vvs[v].x;
+            if(vvs[v].y > maxy) maxy = vvs[v].y;
+            if(vvs[v].x < minx) minx = vvs[v].x;
+            if(vvs[v].y < miny) miny = vvs[v].y;
+        }
+    }
+    
 
-    cubesinfos.forEach(function(cube){
+    var cx = (minx+maxx)/2;
+    var cy = (miny+maxy)/2;
+
+    var wi = (maxx-minx);
+    var hi = (maxy-miny);
+
+    var scawx = 1.;
+    if(wi > baseWidth*.8){
+        scawx = 1./(wi/baseWidth)*.8;
+    }
+    var scawy = 1.;
+    if(hi > baseHeight*.8){
+        scawy = 1./(hi/baseHeight)*.8;
+    }
+    var scaw = min(scawx, scawy);
+    for(var k = 0; k < cubesinfos.length; k++){
+        cubesinfos[k].x -= cx;
+        cubesinfos[k].y -= cy;
+        cubesinfos[k].x *= scaw;
+        cubesinfos[k].y *= scaw;
+        cubesinfos[k].w *= scaw;
+        cubesinfos[k].h *= scaw;
+        var vs = getCubeVertices(cubesinfos[k], 0)
+
+        for(var v = 0; v < vs.length; v++){
+            if(vs[v].x > maxx) maxx = vs[v].x;
+            if(vs[v].y > maxy) maxy = vs[v].y;
+            if(vs[v].x < minx) minx = vs[v].x;
+            if(vs[v].y < miny) miny = vs[v].y;
+        }
+    }
+
+    var hue = fxrandom(.0, 1.);
+        hue = fxrandom(.0, 1.);
+    var color;
+    var distortion = fxrandom(30, 60);
+    //hue = .96;
+
+    for(var pad = 18; pad >= 18; pad -= 18*2){
+        var hue2 = fxrandom(.0, 1.);
+        while(hue2 > .13 && hue2 < .45 || hue2 > .75 && hue2 < .99 || Math.abs(hue-hue2)<.27)
+            hue2 = fxrandom(.0, 1.);
+        color = HSVtoRGB(hue2, fxrandom(.4, .99), fxrandom(.4, .5)*1.5);
+        if(hue2 > .13 && hue2 < .5)
+            color = HSVtoRGB(hue2, fxrandom(.4, .55), fxrandom(.4, .5)*1.5);
+        if(fxrandom(0, 100) > 95){
+            if(fxrand() < .5)
+                color = HSVtoRGB(0,0,fxrandom(0.14, 0.18));
+            else
+                color = HSVtoRGB(0,0,fxrandom(0.9, .99));
+        }
+        outlineold(cubesinfos, 1.5, 1.0, color, pad, distortion);
+        color = HSVtoRGB((hue2+fxrandom(-.07,.07)+1.)%1., fxrandom(.4, .6)*1.5, fxrandom(.4, .5)*1.5);
+        //outlineold(cubesinfos, .29, .06, color, pad, distortion);
+    }
+
+
+    
+    var arr = [];
+    var num = cubesinfos.length;
+    for(var k = 0; k < num; k++){
+      arr.push(k);
+    }
+    arr = shuffle(arr);
+
+    var hue = fxrandom(.0, 1.);
+        hue = fxrandom(.0, 1.);
+    for(var k = 0; k < cubesinfos.length; k++){
+        //let cube = cubesinfos[arr[k]];
+        let cube = cubesinfos[k];
+        var color;
+        var distortion = fxrandom(30, 60);
+        //hue = .96;
         drawCube(cube.x, cube.y, cube.w, cube.h, angle, shrt, hue, distortion);
 
-        mmm = HSVtoRGB(0,0,0);
-        if(fxrand() < .5){
-            mmm = HSVtoRGB(0,0,.8);
+        color = HSVtoRGB(0,0,0.08);
+        if(bw){
+            color = HSVtoRGB(0,0,.8);
         }
-        outlineblack(cube, .505, .018, mmm, pad, distortion);
+        //outlineblack(cube, .505, .018, color, pad, distortion);
         
-        mmm = HSVtoRGB(0,0,0);
-        if(fxrand() < .5){
-            mmm = HSVtoRGB(0,0,.8);
+        color = HSVtoRGB(0,0,0.08);
+        if(bw){
+            color = HSVtoRGB(0,0,.8);
         }
-        outlineblack(cube, .35, .018, mmm, pad, distortion);
-    })
 
+        hue = (hue + fxrandom(-.06, .06) + 1.)%1.;
+        //outlineblack(cube, .05, .018, color, 18, 19);
+    }
 }
 
+
+function Rect(x, y, w, h, n) {
+    this.x = x;
+    this.y = y;
+    this.w = w;
+    this.h = h;
+    this.n = n;
+
+    this.left = this.x - this.w/2;
+    this.right = this.x + this.w/2;
+    this.up = this.y + this.h/2;
+    this.down = this.y - this.h/2;
+}
+
+function stripes(){
+    
+    var D = baseWidth*.75;
+    var color = [0., 0., 1., 1.];
+    var spread = 1;
+    var pscale = .6;
+    var distortion = 6;
+      
+      // Used like so
+    var arr = [];
+    var num = 33;
+    for(var k = 0; k < num; k++){
+      arr.push(k);
+    }
+    shuffle(arr);
+
+    for(var k = 0; k < num; k++){
+        var x = -D/2 + arr[k]*D/num;
+        var y = -D/2 + fxrandom(0, 250)*0;
+        const p1 = new THREE.Vector2(x, D/2);
+        const p2 = new THREE.Vector2(x, y);
+
+        
+        var hue = fxrandom(.05, .06);
+        var color = HSVtoRGB((hue+fxrandom(-.1, .1)+1.)%1., fxrandom(.66, .74)*1.2, fxrandom(.56, .8));
+        if(fxrand() < .5){
+            hue = fxrandom(.5905, .590056);
+            color = HSVtoRGB((hue+fxrandom(-.1, .1)+1.)%1., fxrandom(.66, .74)*.4, fxrandom(.22, .36));
+        }
+
+        drawLine(p1, p2, spread, pscale, color, distortion);
+
+        for(var kk = 0; kk < 3; kk++){
+            var yy = p1.y - D/num * Math.round(fxrandom(1, 30))
+            const p3 = new THREE.Vector2(x, yy);
+            const p4 = new THREE.Vector2(x + D-(arr[k]+2)*20, p3.y);
+            var hue = fxrandom(.05, .06);
+            var color = HSVtoRGB((hue+fxrandom(-.1, .1)+1.)%1., fxrandom(.66, .74)*1.2, fxrandom(.56, .8));
+            if(fxrand() < .5){
+                hue = fxrandom(.5905, .590056);
+                color = HSVtoRGB((hue+fxrandom(-.1, .1)+1.)%1., fxrandom(.66, .74)*.4, fxrandom(.22, .36));
+            }
+            drawLine(p3, p4, spread, pscale, color, distortion);
+        }
+    }
+}
+
+function kdtree(){
+    var D = baseWidth*.75;
+    var squares = [];
+    var numits = 4;
+
+    var divi = Math.round(fxrand());
+
+    squares.push(new Rect(0, 0, D, D, numits));
+
+    var firstcut = null;
+    for(var it = 0; it < numits; it++){
+        var news = [];
+        for(var s = 0; s < squares.length; s++){
+          var x = squares[s].x;
+          var y = squares[s].y;
+          var w = squares[s].w;
+          var h = squares[s].h;
+          var n = squares[s].n;
+          var chc = Math.round(fxrand());
+          var cut;
+          if(it%2 == divi){
+          //if(random(100) < 50){
+            var p = fxrandom(.3, .7);
+            var hh = h*p;
+            cut = y - h/2 + h*p;
+            var yy = y+h/4;
+            news.push(new Rect(x, cut-hh/2, w, hh, it));
+            news.push(new Rect(x, cut+(h-hh)/2, w, h-hh, it));
+          }
+          else{
+            var p = fxrandom(.3, .7);
+            var ww = w*p;
+            cut = x - w/2 + w*p;
+            var xx = x+w/4;
+            news.push(new Rect(cut-ww/2, y, ww, h, it));
+            news.push(new Rect(cut+(w-ww)/2, y, w-ww, h, it));
+          }
+          if(!firstcut)
+              firstcut = cut;
+          
+        }
+        
+        squares = [];
+        news.forEach(function(e){
+          squares.push(e)
+        });
+    }
+
+    var k1;
+    var k2;
+
+    if(divi == 0){
+        for(var k = 0; k < squares.length; k++){
+            var square = squares[k];
+            square.color = [0,0,1,1];
+            if(Math.abs(square.down - firstcut) < 0.002 && Math.abs(square.left-(-D/2)) < 0.002 ){
+                k1 = k;
+            }
+            if(Math.abs(square.up - firstcut) < 0.002 && Math.abs(square.left-(-D/2)) < 0.002 ){
+                k2 = k;
+            }
+        }
+    }
+    if(divi == 1){
+        for(var k = 0; k < squares.length; k++){
+            var square = squares[k];
+            square.color = [0,0,1,1];
+            if(Math.abs(square.right - firstcut) < 0.002 && Math.abs(square.up-(+D/2)) < 0.002){
+                k1 = k;
+            }
+            if(Math.abs(square.left - firstcut) < 0.002 && Math.abs(square.up-(+D/2)) < 0.002){
+                k2 = k;
+            }
+        }
+    }
+
+    var sq1 = squares[k1];
+    var sq2 = squares[k2];
+
+    if(Math.abs(sq1.right-sq2.left) < 0.002){
+        if(sq1.h < sq2.h){
+            var w1 = sq1.w;
+            var h1 = sq1.h;
+            var x1 = sq1.x;
+            var w2 = sq2.w;
+            var h2 = sq2.h;
+            var x2 = sq2.x;
+            sq1.w = sq1.w + sq2.w;
+            sq1.x = sq1.x-w1/2 + sq1.w/2;
+            sq2.h = sq2.h - h1;
+            sq2.y = sq1.y-h1/2 - sq2.h/2;
+        }
+        else{
+            var w1 = sq1.w;
+            var h1 = sq1.h;
+            var x1 = sq1.x;
+            var w2 = sq2.w;
+            var h2 = sq2.h;
+            var x2 = sq2.x;
+            sq2.w = sq1.w + sq2.w;
+            sq2.x = sq1.left + sq2.w/2;
+            sq1.h = sq1.h - h2;
+            sq1.y = sq2.y-h2/2 - sq1.h/2;
+        }
+    }
+    
+    if(Math.abs(sq1.down-sq2.up) < 0.002){
+        if(sq1.w < sq2.w){
+            var w1 = sq1.w;
+            var h1 = sq1.h;
+            var x1 = sq1.x;
+            var w2 = sq2.w;
+            var h2 = sq2.h;
+            var x2 = sq2.x;
+            sq1.y = sq1.y+sq1.h/2 - (h1+h2)/2;
+            sq1.h = h1 + h2;
+            sq2.w = sq2.w - sq1.w;
+            sq2.x = x1+w1/2 + sq2.w/2;
+        }
+        else{
+            var w1 = sq1.w;
+            var h1 = sq1.h;
+            var x1 = sq1.x;
+            var w2 = sq2.w;
+            var h2 = sq2.h;
+            var x2 = sq2.x;
+            sq2.h = sq1.h + sq2.h;
+            sq2.y = sq1.y + sq1.h/2 - sq2.h/2;
+            sq1.w = sq1.w - w2;
+            sq1.x = x2 + w2/2 + sq1.w/2; 
+        }
+    }
+
+    //drawLine(new THREE.Vector2(-D/2-inset/2, -D/2-inset/2), new THREE.Vector2(+D/2+inset/2, -D/2-inset/2), spread, pscale, color, distortion);
+    //drawLine(new THREE.Vector2(+D/2+inset/2, -D/2-inset/2), new THREE.Vector2(+D/2+inset/2, +D/2+inset/2), spread, pscale, color, distortion);
+    //drawLine(new THREE.Vector2(+D/2+inset/2, +D/2+inset/2), new THREE.Vector2(-D/2-inset/2, +D/2+inset/2), spread, pscale, color, distortion);
+    //drawLine(new THREE.Vector2(-D/2-inset/2, +D/2+inset/2), new THREE.Vector2(-D/2-inset/2, -D/2-inset/2), spread, pscale, color, distortion);
+
+    var pscale = 1;
+    var spread = .5;
+    var distortion = 33;
+    var hue = fxrandom(.55, .56);
+    var color;
+    var bw = Math.floor(2*fxrand())*.9;
+    var inset = 1;
+
+    squares.forEach(function(square){
+        var x = square.x;
+        var y = square.y;
+        var w = square.w-inset;
+        var h = square.h-inset;
+
+        color = [0., 0., 1., 1.];
+        color = square.color;
+            
+        const p1 = new THREE.Vector2(x-w/2, y+h/2);
+        const p2 = new THREE.Vector2(x+w/2, y+h/2);
+        const p3 = new THREE.Vector2(x+w/2, y-h/2);
+        const p4 = new THREE.Vector2(x-w/2, y-h/2);
+        
+        hue = fxrandom(.05, .06);
+        color = HSVtoRGB((hue+fxrandom(-.1, .1)+1.)%1., fxrandom(.66, .74)*1.2, fxrandom(.56, .8));
+        if(fxrand() < .5){
+            hue = fxrandom(.5905, .590056);
+            color = HSVtoRGB((hue+fxrandom(-.1, .1)+1.)%1., fxrandom(.66, .74)*.4, fxrandom(.22, .36));
+        }
+
+        var vv = Math.round(fxrand());
+        var hue = .57*vv + fxrandom(-.04, .04);
+        var sat = .8 - .4*vv;
+        var bri = fxrandom(.4, .8)
+        color = HSVtoRGB((hue+fxrandom(-.04, .04)+1.)%1., sat, bri);
+        fillQuad(p1, p2, p3, p4, spread, pscale, color, 22);
+
+        color = HSVtoRGB(fxrand(), fxrandom(0, .3), 0.);
+        //drawLine(p1, p2, .505, .2, color, distortion*.82);
+        //drawLine(p2, p3, .505, .2, color, distortion*.82);
+        //drawLine(p3, p4, .505, .2, color, distortion*.82);
+        //drawLine(p4, p1, .505, .2, color, distortion*.82);
+
+        color = HSVtoRGB(fxrand(), fxrandom(0, .3), .86);
+        //drawLine(p1, p2, .051, .09, color, distortion*.5);
+        //drawLine(p2, p3, .051, .09, color, distortion*.5);
+        //drawLine(p3, p4, .051, .09, color, distortion*.5);
+        //drawLine(p4, p1, .051, .09, color, distortion*.5);
+        
+    });
+
+    
+    var color = [0., 0., 1., 1.];
+    var spread = 1;
+    var pscale = 1;
+    var distortion = 16;
+    for(var k = 0; k < squares.length; k++){
+        var sqq = squares[squares.length-1-k];
+        var x = sqq.x;
+        var y = sqq.y;
+        var w = sqq.w-inset;
+        var h = sqq.h-inset;
+
+        color = sqq.color;
+        color = [1., .96, 1., 1.];
+            
+        const p1 = new THREE.Vector2(x-w/2, y+h/2);
+        const p2 = new THREE.Vector2(x+w/2, y+h/2);
+        const p3 = new THREE.Vector2(x+w/2, y-h/2);
+        const p4 = new THREE.Vector2(x-w/2, y-h/2);
+        drawLine(p1, p2, spread, pscale, color, distortion);
+        drawLine(p2, p3, spread, pscale, color, distortion);
+        drawLine(p3, p4, spread, pscale, color, distortion);
+        drawLine(p4, p1, spread, pscale, color, distortion);
+    }
+
+    hue = fxrandom(.005, .00056);
+    color = HSVtoRGB((hue+fxrandom(-.1, .1)+1.)%1., fxrandom(.66, .74)*1.2, fxrandom(.56, .8));
+    if(fxrand() < .5){
+        hue = fxrandom(.5905, .590056);
+        color = HSVtoRGB((hue+fxrandom(-.1, .1)+1.)%1., fxrandom(.66, .74)*.4, fxrandom(.22, .6));
+    }
+    //drawLine(new THREE.Vector2(-D/2-inset/2, -D/2-inset/2), new THREE.Vector2(+D/2+inset/2, -D/2-inset/2), spread, pscale, color, distortion);
+    //drawLine(new THREE.Vector2(+D/2+inset/2, -D/2-inset/2), new THREE.Vector2(+D/2+inset/2, +D/2+inset/2), spread, pscale, color, distortion);
+    //drawLine(new THREE.Vector2(+D/2+inset/2, +D/2+inset/2), new THREE.Vector2(-D/2-inset/2, +D/2+inset/2), spread, pscale, color, distortion);
+    //drawLine(new THREE.Vector2(-D/2-inset/2, +D/2+inset/2), new THREE.Vector2(-D/2-inset/2, -D/2-inset/2), spread, pscale, color, distortion);
+   
+}
+
+function createHatch(path){
+    if(!path)
+        return [];
+
+    var tilt = fxrandom(-100, 100);
+    var hatchFromEdge = 13;
+    var spaced = new ClipperLib.Paths();
+    var co = new ClipperLib.ClipperOffset(2.0, 0.25);
+    co.AddPath(path, ClipperLib.JoinType.jtMiter, ClipperLib.EndType.etClosedPolygon);
+    co.Execute(spaced, -hatchFromEdge);
+    
+    let spacedPath = [];
+    if(!spaced[0])
+        return [];
+    for(var k = 0; k < spaced[0].length; k++){
+        spacedPath.push({"X": spaced[0][k].X, "Y": spaced[0][k].Y})
+    }
+    path = spacedPath;
+
+    var hatchSpacing = 14;
+    var bounds = ClipperLib.JS.BoundsOfPath(path, 1);
+
+    var ccx = (bounds.left + bounds.right)/2;
+    var ccy = (bounds.top + bounds.bottom)/2;
+    var bwi = Math.abs(bounds.right - bounds.left)*1.4;
+    var bhi = Math.abs(bounds.bottom - bounds.top)*1.4;
+    var bbb = bwi>bhi ? bwi : bhi;
+    var angle = fxrandom(0, 2*3.14159);
+    var dir = new THREE.Vector2(Math.cos(angle), Math.sin(angle));
+    var pos0 = new THREE.Vector2(ccx - dir.x*bbb, ccy - dir.y*bbb);
+    var pos = new THREE.Vector2(ccx - dir.x*bbb, ccy - dir.y*bbb);
+    var steps = Math.round(bbb/hatchSpacing*2);
+    var linePath = [];
+    var pdir = new THREE.Vector2(dir.y, -dir.x).normalize().multiplyScalar(bbb/2);
+    for(var s = 0; s < steps; s++){
+        var left = pos.clone().add(pdir).add(pdir).clone();
+        var right = pos.clone().sub(pdir).sub(pdir).clone();
+        linePath.push({"X":left.x, "Y":left.y});
+        linePath.push({"X":right.x, "Y":right.y});
+        pos.add(dir.clone().multiplyScalar(hatchSpacing));
+    }
+    var l1 = pos.clone().sub(pdir).sub(pdir).clone();
+    linePath.push({"X":l1.x, "Y":l1.y});
+    var l2 = pos0.clone().sub(pdir).sub(pdir).clone();
+    linePath.push({"X":l2.x, "Y":l2.y});
+
+    var clippedLines = new ClipperLib.Paths();
+    var cpr = new ClipperLib.Clipper();
+    cpr.AddPath(linePath, ClipperLib.PolyType.ptSubject, true);
+    cpr.AddPath(path, ClipperLib.PolyType.ptClip, true)
+    cpr.Execute(ClipperLib.ClipType.ctIntersection, clippedLines);
+
+    var clippedLinePaths = [];
+    for(var q = 0; q < clippedLines.length; q++){
+        let clippedLinePath = [];
+        for(var k = 0; k < clippedLines[q].length; k++){
+            clippedLinePath.push({"X": clippedLines[q][k].X, "Y": clippedLines[q][k].Y})
+        }
+        clippedLinePaths.push(clippedLinePath);
+    }
+
+    return clippedLinePaths;
+    //return [linePath];
+}
+
+
+
+function waves(){
+    
+    var D = baseWidth*.75;
+    var pad = 18;
+    var pscale = 1;
+    var distortion = 12;
+    var spread = .6;
+    var overshoot = 16;
+    var color;
+    var num = 100;
+
+    var wii = fxrandom(1.2, 2);
+    var depth = fxrandom(300, 300);
+    var offs = fxrandom(0, 100);
+    var frqs = fxrandom(2, 4);
+
+    for(var k = 0; k < num; k++){
+        var y = D/2 - k*D/num;
+        //var y = -D/2 + k*D/num;
+        
+
+        var segs = 64;
+        var pts = [];
+
+        var eyek = 50;
+        var eyer = 36;
+        var eyel = 28;
+
+        var noseq = segs/2;
+        var nosek1 = 52;
+        var nosek2 = 52 + Math.round(8, 8);
+        var nosew = 4;
+
+        var pts = [];
+        for(var q = 0; q < segs; q++){
+            var x1 = -D/2 + q*D/segs;
+
+            var v1 = new THREE.Vector2(x1*2, y*4-50);
+            var fxy = Math.sqrt(v1.x*v1.x+v1.y*v1.y);
+            fxy = 1. - fxy/D*wii;
+            fxy = power(fxy, 2);
+            if(Math.sqrt(v1.x*v1.x+v1.y*v1.y) >= D/wii) fxy = 0;
+            var fxy1 = fxy*depth;
+
+            var dl = Math.sqrt((eyel-q)*(eyel-q) + (eyek-k)*(eyek-k));
+            var dr = Math.sqrt((eyer-q)*(eyer-q) + (eyek-k)*(eyek-k));
+
+            var eyeslope;
+            eyeslope = fxrandom(2, 4);
+            var el = power(1-dl/4, eyeslope);
+            if(dl > 4) el = 0;
+            el = 33*el;
+
+            eyeslope = fxrandom(2, 4);
+            var er = power(1-dr/4, eyeslope);
+            if(dr > 4) er = 0;
+            er = 33*er;
+
+            var nu = 0;
+            var noseslope = fxrandom(2, 4);
+            if(k >= nosek1 && k <= nosek2){
+                var p1 = map(k, nosek1, nosek2, 0, 1);
+                var p2 = power(1-Math.abs(q - noseq)/(p1 * nosew), noseslope);
+                if(Math.abs(q-noseq) > (p1 * nosew)) p2 = 0;
+                nu = 44*p2*p1;
+            }
+
+            var mu = 0;
+            if(k == nosek2 + 5 && q > segs/2-5 && q < segs/2+5){
+                mu = 8;
+            }
+
+            //var yy = y + fxy1 - el - er + nu + mu;
+            var dd =  Math.sqrt(v1.x*v1.x+v1.y*v1.y)*.005*frqs+.5;
+            var yy = y + fxy1 + 300*0*Math.sin(dd+offs)/dd;
+
+            pts.push([new THREE.Vector2(x1, yy), fxy]);
+        }
+
+        color = palette[Math.floor(fxrandom(0, palette.length))];
+        color = [color[0]+fxrandom(-.1,.1), color[1]+fxrandom(-.1,.1), color[2]+fxrandom(-.1,.1)]
+        for(var p = 0; p < pts.length-1; p++){
+            const p1 = pts[p][0];
+            const p2 = pts[p+1][0];
+            const fxy = pts[p+1][1];
+            drawLine(p1, p2, spread+.3*(fxy>.01), pscale, color, distortion, k, true);
+        }
+
+    }
+}
+
+function polygons(){
+    
+    var givespace = 13;
+    var paths = [];
+    for(var k = 0; k < 3; k++){
+        var x = fxrandom(-baseWidth/2*.1, baseWidth/2*.1);
+        var y = fxrandom(-baseWidth/2*.1, baseWidth/2*.1);
+        var radius = fxrandom(300, 380)*1.4;
+
+        let path = [];
+        var qs = Math.round(fxrandom(4, 4));
+        if(k >= 0){
+            //qs *= 18;
+        }
+        for(var q = 0; q < qs; q++){
+            var p = map(q, 0, qs, 0, 1);
+            var angle = radians(p*360);
+            var r = radius + radius*(-.5 + power(noise((Math.cos(angle)+0.)*1, (Math.sin(angle)+1.)*1, 31.3*k), 3));
+            var raa = radians(fxrandom(-360/qs/2, 360/qs/2))*.1;
+            var xx = x + r * Math.cos(angle+raa+3.14159/4);
+            var yy = y + r * Math.sin(angle+raa+3.14159/4);
+
+            if(k > 0){
+                x = fxrandom(-baseWidth/2*.3, baseWidth/2*.3);
+                y = fxrandom(-baseWidth/2*.3, baseWidth/2*.3);
+                r = radius*.85 + radius*.7*(-.5 + power(noise((Math.cos(angle)+0.)*1, (Math.sin(angle)+1.)*1, 31.3*k), 3));
+                raa = radians(fxrandom(-360/qs/2, 360/qs/2))*.1;
+                xx = x + 1*r * Math.cos(angle+raa+3.14159/4);
+                yy = y + 1*r * Math.sin(angle+raa+3.14159/4);
+            }
+            path.push({"X":xx, "Y":yy});
+        }
+        path.push(path[0]);
+        paths.push(path);
+    }
+
+
+
+    var clipped = new ClipperLib.Paths();
+    var spaced = new ClipperLib.Paths();
+    var cpr = new ClipperLib.Clipper();
+    var co = new ClipperLib.ClipperOffset(2.0, 0.25);
+
+    paths.forEach((e, i)=>{if(i>0)co.AddPath(e, ClipperLib.JoinType.jtMiter, ClipperLib.EndType.etClosedPolygon);})
+    
+    co.Execute(spaced, +givespace);
+
+    var spacedPaths = [];
+    for(var q = 0; q < spaced.length; q++){
+        let spacedPath = [];
+        for(var k = 0; k < spaced[q].length; k++){
+            spacedPath.push({"X": spaced[q][k].X, "Y": spaced[q][k].Y})
+        }
+        spacedPaths.push(spacedPath);
+    }
+
+    cpr.AddPath(paths[0], ClipperLib.PolyType.ptSubject, true);
+    spacedPaths.forEach((e)=>{cpr.AddPath(e, ClipperLib.PolyType.ptClip, true);})
+    cpr.Execute(ClipperLib.ClipType.ctXor, clipped);
+
+    var clippedPaths = [];
+    for(var q = 0; q < clipped.length; q++){
+        let clippedPath = [];
+        for(var k = 0; k < clipped[q].length; k++){
+            clippedPath.push({"X": clipped[q][k].X, "Y": clipped[q][k].Y})
+        }
+        clippedPaths.push(clippedPath);
+    }
+
+    var pad = 18;
+    var pscale = 1;
+    var distortion = 25;
+    var spread = .6;
+    var overshoot = 16;
+    var hue, color;
+
+    var minx = +10000;
+    var miny = +10000;
+    var maxx = -10000;
+    var maxy = -10000;
+    for(var k = 0; k < paths.length; k++){
+        var bounds = ClipperLib.JS.BoundsOfPath(paths[k], 1);
+        if(bounds.left < minx) minx = bounds.left;
+        if(bounds.top < miny) miny = bounds.top;
+        if(bounds.right > maxx) maxx = bounds.right;
+        if(bounds.bottom > maxy) maxy = bounds.bottom;
+    }
+    var ccx = (minx + maxx)/2;
+    var ccy = (miny + maxy)/2;
+    var centershift = new THREE.Vector2(-ccx, -ccy);
+    var scawx = 1.;
+    var wi = (maxx-minx);
+    var hi = (maxy-miny);
+    if(wi > baseWidth*.8){
+        scawx = 1./(wi/baseWidth)*.8;
+    }
+    var scawy = 1.;
+    if(hi > baseHeight*.8){
+        scawy = 1./(hi/baseHeight)*.8;
+    }
+    var scaw = min(scawx, scawy);
+
+    
+    var allLines = new ClipperLib.Paths();
+    var cpru = new ClipperLib.Clipper();
+    cpru.AddPaths(paths, ClipperLib.PolyType.ptSubject, true);
+    cpru.Execute(ClipperLib.ClipType.ctUnion, allLines);
+
+    var allLinePaths = [];
+    for(var q = 0; q < allLines.length; q++){
+        let allLinePath = [];
+        for(var k = 0; k < allLines[q].length; k++){
+            allLinePath.push({"X": allLines[q][k].X, "Y": allLines[q][k].Y})
+        }
+        allLinePaths.push(allLinePath);
+    }
+
+    
+    
+    for(var s = 0; s < paths.length; s++){
+        let path = paths[s];
+        hue = fxrandom(0, .77);
+        color = HSVtoRGB(hue, 0.1, .3);
+        color = palette[0];
+        for(var k = 0; k < path.length; k++){
+            const p1 = new THREE.Vector2(path[k].X, path[k].Y);
+            const p2 = new THREE.Vector2(path[(k+1)%path.length].X, path[(k+1)%path.length].Y);
+            const v = p1.clone().sub(p2).normalize();
+            p1.add(v.clone().multiplyScalar(fxrandom(overshoot*44,overshoot*44))).add(centershift).multiplyScalar(scaw);
+            p2.add(v.clone().multiplyScalar(-fxrandom(overshoot*44,overshoot*44))).add(centershift).multiplyScalar(scaw);
+            //if(fxrandom(0, 100) > 90)
+            //    drawLine(p1, p2, .08, .027, color, distortion*1);
+        }
+    }
+
+    
+    color = palette[Math.floor(fxrandom(0, palette.length))];
+    color = [color[0]+fxrandom(-.1,.1), color[1]+fxrandom(-.1,.1), color[2]+fxrandom(-.1,.1)]
+    for(var s = 0; s < allLinePaths.length; s++){
+        let path = allLinePaths[s];
+        for(var k = 0; k < path.length; k++){
+            const p1 = new THREE.Vector2(path[k].X, path[k].Y);
+            const p2 = new THREE.Vector2(path[(k+1)%path.length].X, path[(k+1)%path.length].Y);
+            const v = p1.clone().sub(p2).normalize();
+            p1.add(v.clone().multiplyScalar(fxrandom(0,overshoot))).add(centershift).multiplyScalar(scaw);
+            p2.add(v.clone().multiplyScalar(-fxrandom(0,overshoot))).add(centershift).multiplyScalar(scaw);
+            //drawLine(p1, p2, 1, 1, color, distortion);
+        }
+    }
+
+    for(var u = 1; u < paths.length; u++){
+        var hatches = createHatch(paths[u]);
+        var hue = fxrandom(.0, .7);
+        var sat = fxrandom(.4, .97);
+        var bri = fxrandom(.4, .97);
+        if(hue > 0.1 && hue < .45){
+            hue = fxrandom(0.45, 1.05)%1.;
+        }
+        if(fxrand() < .3){
+            hue = fxrandom(0, 0.03);
+            sat = fxrandom(.8, .99)
+            bri = fxrandom(.5, .99);
+        }
+        color = HSVtoRGB(hue, sat, bri);
+        color = [color[0]+fxrandom(-.1,.1), color[1]+fxrandom(-.1,.1), color[2]+fxrandom(-.1,.1)]
+        var xoloff = Math.floor(fxrandom(0, palette.length));
+        var colparts = 1 + Math.floor(fxrandom(0, 3));
+        var colorful = false;
+        if(fxrand() < 1.5){
+            colorful = true;
+        }
+        color = palette[Math.floor(fxrandom(0, palette.length/colparts) + xoloff)%palette.length];
+        for(var h = 0; h < hatches.length; h++){
+            let path = hatches[h];
+            //color = HSVtoRGB(hue, sat+fxrandom(-.3, .0), bri+fxrandom(-.3, .0));
+            if(colorful){
+                color = palette[Math.floor(fxrandom(0, palette.length/colparts) + xoloff)%palette.length];
+            }
+            var ccolor = [color[0]+fxrandom(-.1,.1), color[1]+fxrandom(-.1,.1), color[2]+fxrandom(-.1,.1)]
+            for(var k = 0; k < path.length; k++){
+                const p1 = new THREE.Vector2(path[k].X, path[k].Y);
+                const p2 = new THREE.Vector2(path[(k+1)%path.length].X, path[(k+1)%path.length].Y);
+                const v = p1.clone().sub(p2).normalize();
+                p1.add(v.clone().multiplyScalar(fxrandom(0,0))).add(centershift).multiplyScalar(scaw);
+                p2.add(v.clone().multiplyScalar(-fxrandom(0,0))).add(centershift).multiplyScalar(scaw);
+                drawLine(p1, p2, spread, pscale, ccolor, distortion*.5, h+k);
+            }
+        }
+    }
+
+    hue = fxrandom(0, .77);
+    var hue = fxrandom(.0, .7);
+    var sat = fxrandom(.4, .5);
+    var bri = fxrandom(.6, .97);
+    if(hue > 0.1 && hue < .45){
+        sat *= .5;
+    }
+    for(var s = 0; s < paths.length; s++){
+        let path = paths[s];
+        color = HSVtoRGB((hue + fxrandom(-.1, .1)+1.)%1, sat, bri);
+        if(fxrandom(0, 100) > 90){
+            var hue = fxrandom(.0, .7);
+            var sat = fxrandom(.4, .5);
+            var bri = fxrandom(.6, .97);
+            if(hue > 0.1 && hue < .45){
+                sat *= .5;
+            }
+        }
+        color = palette[Math.floor(fxrandom(0, palette.length))];
+        for(var k = 0; k < path.length; k++){
+            const p1 = new THREE.Vector2(path[k].X, path[k].Y);
+            const p2 = new THREE.Vector2(path[(k+1)%path.length].X, path[(k+1)%path.length].Y);
+            const v = p1.clone().sub(p2).normalize();
+            p1.add(v.clone().multiplyScalar(fxrandom(0,overshoot))).add(centershift).multiplyScalar(scaw);
+            p2.add(v.clone().multiplyScalar(-fxrandom(0,overshoot))).add(centershift).multiplyScalar(scaw);
+            drawLine(p1, p2, spread, pscale, color, distortion);
+        }
+    }
+
+    for(var k = 0; k < clippedPaths.length; k++){
+        let clippedPath = clippedPaths[k];
+
+        /*var hatches = createHatch(clippedPath);
+        for(var h = 0; h < hatches.length; h++){
+            let path = hatches[h];
+            //color = HSVtoRGB(hue, sat+fxrandom(-.3, .0), bri+fxrandom(-.3, .0));
+            color = palette[Math.floor(fxrandom(0, palette.length))];
+            //color = palette[Math.floor(palette.length*h/hatches.length)];
+            var ccolor = [color[0]+fxrandom(-.1,.1), color[1]+fxrandom(-.1,.1), color[2]+fxrandom(-.1,.1)]
+            for(var rr = 0; rr < path.length; rr++){
+                const p1 = new THREE.Vector2(path[rr].X, path[rr].Y);
+                const p2 = new THREE.Vector2(path[(rr+1)%path.length].X, path[(rr+1)%path.length].Y);
+                const v = p1.clone().sub(p2).normalize();
+                p1.add(v.clone().multiplyScalar(fxrandom(0,0))).add(centershift).multiplyScalar(scaw);
+                p2.add(v.clone().multiplyScalar(-fxrandom(0,0))).add(centershift).multiplyScalar(scaw);
+                //drawLine(p1, p2, spread, pscale, ccolor, distortion*.5, h+k);
+            }
+        }*/
+
+        color = palette[Math.floor(fxrandom(0, palette.length))];
+        color = [color[0]+fxrandom(-.1,.1), color[1]+fxrandom(-.1,.1), color[2]+fxrandom(-.1,.1)]
+        for(var q = 0; q < clippedPath.length; q++){
+            const p1 = new THREE.Vector2(clippedPath[q].X, clippedPath[q].Y);
+            const p2 = new THREE.Vector2(clippedPath[(q+1)%clippedPath.length].X, clippedPath[(q+1)%clippedPath.length].Y);
+            const v = p1.clone().sub(p2).normalize();
+            p1.add(v.clone().multiplyScalar(fxrandom(0,overshoot))).add(centershift).multiplyScalar(scaw);
+            p2.add(v.clone().multiplyScalar(-fxrandom(0,overshoot))).add(centershift).multiplyScalar(scaw);
+            drawLine(p1, p2, spread, pscale, color, distortion);
+        }
+    }
+
+
+    
+    
+}
 
 function midcube(){
     
@@ -667,8 +1395,8 @@ function midcube(){
         
     var x = fxrandom(-3, 3);
     var y = fxrandom(-3, 3);
-    var cubewidth = fxrandom(55, 400);
-    var cubeheight = fxrandom(55, 400);
+    var cubewidth = fxrandom(155, 500);
+    var cubeheight = fxrandom(333, 700);
     cubesinfos.push({
         'x': x-cubewidth*shrt*Math.cos(angle)/2,
         'y': y-cubewidth*shrt*Math.sin(angle)/2,
@@ -692,19 +1420,19 @@ function midcube(){
         if(fxrand() < .5){
             color = HSVtoRGB(0,0,.8);
         }
-        outlineblack(cube, .505, .018, color, pad, distortion);
+        //outlineblack(cube, .505, .018, color, pad, distortion);
         
         color = HSVtoRGB(0,0,0);
         if(fxrand() < .5){
             color = HSVtoRGB(0,0,.8);
         }
-        outlineblack(cube, .05, .018, color, pad, 19);
+        //outlineblack(cube, .05, .018, color, pad, 19);
     })
 
 }
 
 function animate() {
-    renderer.setClearColor( 0x121212, 1 );
+    renderer.setClearColor( 0x929292, 1 );
     renderer.clear();
     //requestAnimationFrame(animate);
     if(renderer && false){
@@ -789,8 +1517,63 @@ function radians(angle){
     return angle/360.*2*3.14159;
 }
 
+var loader = new THREE.FileLoader();
+loader.load('assets/shaders/post.vert',function ( data ) {
+    PostProcShader.vertexShader = data;
+    
+    loader.load('assets/shaders/post.frag',function ( data ) {
+        PostProcShader.fragmentShader = data;
+        reset();
+    });
+});
+
+var palettes = [
+    'f46036-5b85aa-414770-372248-171123',
+    'cfdbd5-e8eddf-f5cb5c-242423-333533',
+    '084c61-db504a-e3b505-4f6d7a-56a3a6',
+    '177e89-084c61-db3a34-ffc857-323031',
+    '32373b-4a5859-f4d6cc-f4b860-c83e4d',
+    'c0caad-9da9a0-654c4f-b26e63-cec075',
+    'ac80a0-89aae6-3685b5-0471a6-061826',
+    'fbf5f3-e28413-000022-de3c4b-c42847',
+    'dceed1-aac0aa-736372-a18276-7a918d',
+    '12355b-420039-d72638-ffffff-ff570a',
+    'e8e1ef-d9fff8-c7ffda-c4f4c7-9bb291',
+    '555b6e-89b0ae-bee3db-faf9f9-ffd6ba',
+    'de6b48-e5b181-f4b9b2-daedbd-7dbbc3',
+    'f55d3e-878e88-f7cb15-ffffff-76bed0',
+    'fe5f55-f0b67f-d6d1b1-c7efcf-eef5db',
+    'e59f71-ba5a31-0c0c0c-69dc9e-ffffff',
+    'bfb48f-564e58-904e55-f2efe9-252627',
+    'ba1200-031927-9dd1f1-508aa8-c8e0f4',
+]
+
+function hexToRgb(hex) {
+    var result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    return result ? [
+      parseInt(result[1], 16)/255.,
+      parseInt(result[2], 16)/255.,
+      parseInt(result[3], 16)/255.
+    ] : null;
+}
+
+for(var k = 0; k < palettes.length; k++){
+    let text = palettes[k];
+    let cols = text.split('-')
+    let caca = [];
+    cols.forEach((e)=>{caca.push(hexToRgb(e))});
+    shuffle(caca)
+    var coco = [];
+    caca.forEach((e, i)=>{coco.push([(caca[i][0]+fxrandom(-.2, .2)), (caca[i][1]+fxrandom(-.2, .2)), (caca[i][2]+fxrandom(-.2, .2))])});
+    palettes[k] = coco;
+}
+
+var palette;
+
 function reset(){
-	
+
+    palette = palettes[Math.floor(fxrandom(0, palettes.length))]
+
     var ns = fxrandom(0, 100000);
     noiseSeed(ns);
     globalIndex = 0;
@@ -813,17 +1596,17 @@ function reset(){
     canvasHeight = ress;
 
     var ww = window.innerWidth || canvas.clientWidth || body.clientWidth;
-    var wh = window.innerHeight|| canvas.clientHeight|| body.clientHeight;
+    var wh = window.innerHeight || canvas.clientHeight|| body.clientHeight;
 
-    baseWidth = ress-60;
-    baseHeight = ress-60;
+    baseWidth = ress-0;
+    baseHeight = ress-0;
 
     var mm = min(ww, wh);
     winScale = mm / baseWidth;
     
     if(ww < ress+16 || wh < ress+16 || true){
-        canvasWidth = mm-60*mm/ress;
-        canvasHeight = mm-60*mm/ress;
+        canvasWidth = mm-33*mm/ress;
+        canvasHeight = mm-33*mm/ress;
         //baseWidth = mm-16-16;
         //baseHeight = mm-16-16;
     }
@@ -907,7 +1690,7 @@ function reset(){
 function generateBrush(){
     
     var radi = .24;
-    var strands = 433;
+    var strands = 333;
     for(var k = 0; k < strands; k++){
         var ang = fxrandom(0, 2*3.14159);
         var rad = map(Math.sqrt(fxrand()), 0, 1, 0, radi);
@@ -1040,7 +1823,7 @@ function loadData(){
     if(ff)
         renderer = new THREE.WebGLRenderer({alpha: true, preserveDrawingBuffer: true});
 
-    renderTarget = new THREE.WebGLRenderTarget(1.*canvasWidth*window.devicePixelRatio, 1.*canvasHeight*window.devicePixelRatio);
+    renderTarget = new THREE.WebGLRenderTarget(canvasWidth*window.devicePixelRatio, canvasHeight*window.devicePixelRatio);
 
     finalscene = new THREE.Scene();
 
@@ -1071,7 +1854,7 @@ function loadData(){
 
     repositionCanvas(renderer.domElement);
 
-    renderer.domElement.style.border = "10px solid black";
+    //renderer.domElement.style.border = "10px solid black";
 
         
     scene.background = new THREE.Color( .9, .9, .9);
@@ -1086,9 +1869,9 @@ function loadData(){
     //luminosityPass = new ShaderPass( PostProcShader );
     //composer.render();
     renderer.setRenderTarget(renderTarget);
-    renderer.setClearColor( 0x121212, 1 );
+    renderer.setClearColor( 0x929292, 1 );
     renderer.render(scene, camera);
-    renderer.setClearColor( 0x121212, 1 );
+    renderer.setClearColor( 0x929292, 1 );
     renderer.clear();
     //requestAnimationFrame(animate);
     //animate();
@@ -1100,7 +1883,12 @@ function loadData(){
 
     //scratch(.4*fxrandom(-baseWidth/2, baseWidth/2), .4*fxrandom(-baseHeight/2, baseHeight/2));
     //cubes();
-    midcube();
+    //midcube();
+    //kdtree();
+    //stripes();
+
+    polygons();
+    //waves();
     
     //renderer.setRenderTarget(null);
     //renderer.render(finalscene, camera);
@@ -1156,7 +1944,7 @@ function repositionCanvas(canvas){
     }
 
     canvas.style.position = 'absolute';
-    canvas.style.left = (ww - canvasWidth)/2 - 10*min(ww, wh)/ress + 'px';
+    canvas.style.left = (ww - canvasWidth)/2 + 'px';
     canvas.style.top = (wh - canvasHeight)/2 + 'px'; // ovih 6 je border
     
 }
@@ -1217,17 +2005,17 @@ function windowResized() {
     if(renderer){
         
         var ww = window.innerWidth || canvas.clientWidth || body.clientWidth;
-        var wh = window.innerHeight|| canvas.clientHeight|| body.clientHeight;
+        var wh = window.innerHeight || canvas.clientHeight|| body.clientHeight;
 
-        baseWidth = ress-60;
-        baseHeight = ress-60;
+        baseWidth = ress-0;
+        baseHeight = ress-0;
 
         var mm = min(ww, wh);
         winScale = mm / baseWidth;
         
         if(ww < ress+16 || wh < ress+16 || true){
-            canvasWidth = mm-60*mm/ress;
-            canvasHeight = mm-60*mm/ress;
+            canvasWidth = mm-33*mm/ress;
+            canvasHeight = mm-33*mm/ress;
             //baseWidth = mm-16-16;
             //baseHeight = mm-16-16;
         }
@@ -1246,7 +2034,7 @@ function windowResized() {
         //renderer.setPixelRatio( 1.0000 );
         renderer.setSize( canvasWidth, canvasHeight );
     
-        //renderer.setClearColor( 0x121212, 1 );
+        //renderer.setClearColor( 0x929292, 1 );
         //renderer.clear();
         //renderer.domElement.id = "cnvs";
         //renderer.domElement.style.position = "absolute";
@@ -1275,7 +2063,7 @@ function windowResized() {
 }  
 
 function mouseClicked(){
-    reset();
+    //reset();
 }
 
 function scroll(event) {
@@ -1417,5 +2205,3 @@ var noiseSeed = function(seed) {
   }
 };
 
-
-reset();

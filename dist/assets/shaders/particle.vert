@@ -191,14 +191,14 @@ void main() {
 
     vec3 individual = vec3(0., 0., 0.);
 
-    individual.x = u_spread*(fff(vec2(1.31, 23.1), .04*u_time+index+55.2214));
-    individual.y = u_spread*(fff(vec2(31.31, 53.1), .04*u_time+index+22.651));
+    individual.x = u_spread*(fff(vec2(31.31, 22.1)*u_seed+index, .084*u_time+index*31.31+55.2214));
+    individual.y = u_spread*(fff(vec2(83.31, 65.1)*u_seed+index, .084*u_time+index*31.31+22.651));
 
     vec4 mvPosition = modelViewMatrix * vec4( position+individual+vec3(u_mouse*(vec2(1.,-1.)), 0.0), 1.0 );
 
 
     float pscale = max(size.x, size.y)*4. + 0.*5.*sin(u_time/60.*5. + .074414313*index);
-    gl_PointSize = 0.8* pscale * u_scrollscale * u_winscale * .5 * ((1.-.3) + 0.*2.*.3*random(mvPosition.xy+mod(u_time/100., 1.0)));
+    gl_PointSize = .8* pscale * u_scrollscale * u_winscale * .5 * ((1.-.3) + 0.*2.*.3*random(mvPosition.xy+mod(u_time/100., 1.0)));
     //gl_PointSize = pscale * u_scrollscale * u_winscale * .5;
     gl_Position = projectionMatrix * mvPosition;
 
@@ -209,21 +209,24 @@ void main() {
     vec3 hsv = vec3(0.);
     vec3 hsvdiffuse = rgb2hsv(u_diffuse.rgb);
 
-    hsv.r = mod(1.0 + hsvdiffuse.r + .2*fff(vec2(u_time,u_time)*.0131, u_seed*.1+index), 1.0);
+    hsv.r = mod(1.0 + hsvdiffuse.r + .4*fff(vec2(u_time,u_time)*.0131, u_seed*.1+index), 1.0);
     hsv.g = hsvdiffuse.g*.99;
     hsv.b = hsvdiffuse.b*.93;
     
     
-    if(mod(index, 3.) < 0.01 && pscale < 8.){
-        hsv.g = hsv.g*.8;
-        hsv.b = .65 + .05*hsv.b;
+    if(mod(index, 3.5) < 0.01 && pscale < 18.){
+        hsv.r = mod(hsv.r+0.1, 1.0);
+        hsv.g = hsv.g*.5;
+        hsv.b = .44 + .05*hsv.b;
     }
+    
 
     vec3 rgb = hsv2rgb(hsv);
 
 
-    float alpha = .325 + .18*power((fff(vec2(u_time,u_time)*.021+index, 31.31+u_seed*.1+index) + .5)*.68, 6.);
-    vColor = vec4(rgb, power(alpha*6., 1.)/6.);
+    float alpha = .1 - .25*power((fff(vec2(u_time,u_time)*.011+0.*index, 31.31+u_seed*.1) + .5)*.68,1.);
+    //vColor = vec4(rgb, power(alpha*6., 1.)/6. * u_diffuse.a);
+    vColor = vec4(rgb, .2);
 
     //vColor.r *= .5 + (1.-.5)*2.*random(mvPosition.xy+mod(u_time/100.+.366, 1.0));
     //vColor.g *= .5 + (1.-.5)*2.*random(mvPosition.xy+mod(u_time/100.+.253, 1.0));
