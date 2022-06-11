@@ -5,5 +5,5 @@
     npm run build
 
 <p align="center">
-    <img width="700px" src="https://github.com/patakk/brush/blob/master/sample.png">
-</p>pm run build
+    <img width="700px" src="https://github.com/patakkpaint/blob/master/sample.png">
+</p>
