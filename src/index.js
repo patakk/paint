@@ -277,8 +277,8 @@ function drawLine(p1, p2, spread, pscale, color, distortion, individual=0){
         //var nzy = env*distortion*(-.5+power(noise(k*.005+frameCount*.0004, x1*.04+y1*.2855), 4));
         var xx = x1 + p*(x2 - x1);
         var yy = y1 + p*(y2 - y1);
-        var nzx = 2*(1+0*(individual>0))*distortion*(-.5+power(noise(xx*.003,yy*.003, individual+113.31), 4));
-        var nzy = 2*(1+0*(individual>0))*distortion*(-.5+power(noise(xx*.003,yy*.003, individual+225.66), 4));
+        var nzx = 2*(1+0*(individual>0))*distortion*(-.5+power(noise((baseWidth/2+xx)*.003,(baseHeight/2+yy)*.003, individual+113.31), 4));
+        var nzy = 2*(1+0*(individual>0))*distortion*(-.5+power(noise((baseWidth/2+xx)*.003,(baseHeight/2+yy)*.003, individual+225.66), 4));
         xx += nzx;
         yy += nzy;
 
@@ -525,13 +525,13 @@ function outlinenew(cubesinfos, spread, pscale, color, pad, distortion){
         //drawLine(cubeall.p4, cubeall.p1, spread, pscale, color, distortion);
 
         oupaths.push([
-            {'X': cubeall.p1.x, 'Y': cubeall.p1.y},
-            {'X': cubeall.p5.x, 'Y': cubeall.p5.y},
-            {'X': cubeall.p6.x, 'Y': cubeall.p6.y},
-            {'X': cubeall.p7.x, 'Y': cubeall.p7.y},
-            {'X': cubeall.p3.x, 'Y': cubeall.p3.y},
-            {'X': cubeall.p4.x, 'Y': cubeall.p4.y},
-            {'X': cubeall.p1.x, 'Y': cubeall.p1.y},
+            {'X': cubeall.p1.x*1.0, 'Y': cubeall.p1.y*1.0},
+            {'X': cubeall.p5.x*1.0, 'Y': cubeall.p5.y*1.0},
+            {'X': cubeall.p6.x*1.0, 'Y': cubeall.p6.y*1.0},
+            {'X': cubeall.p7.x*1.0, 'Y': cubeall.p7.y*1.0},
+            {'X': cubeall.p3.x*1.0, 'Y': cubeall.p3.y*1.0},
+            {'X': cubeall.p4.x*1.0, 'Y': cubeall.p4.y*1.0},
+            {'X': cubeall.p1.x*1.0, 'Y': cubeall.p1.y*1.0},
         ])
     }
 
@@ -539,7 +539,7 @@ function outlinenew(cubesinfos, spread, pscale, color, pad, distortion){
     var pscale = 1;
     var distortion = 65*.2;
     var spread = .6;
-    var overshoot = 16;
+    var overshoot = 18;
     //var hue, color;
     
     var minx = +10000;
@@ -570,18 +570,40 @@ function outlinenew(cubesinfos, spread, pscale, color, pad, distortion){
     var scaw = min(scawx, scawy);
     scaw = 1.;
 
+    var pospath = [
+        {'X': -600, 'Y': -600},
+        {'X': +600, 'Y': -600},
+        {'X': +600, 'Y': +600},
+        {'X': -600, 'Y': +600},
+    ]
 
 
-    var allLines = new ClipperLib.Paths();
-    var cpru = new ClipperLib.Clipper();
-    cpru.AddPaths(oupaths, ClipperLib.PolyType.ptSubject, true);
-    var sss = new ClipperLib.PolyTree();
-    cpru.Execute(ClipperLib.ClipType.ctUnion, allLines);
-    cpru.Execute(ClipperLib.ClipType.ctUnion, sss);
-    var solution_Polygons = new ClipperLib.Paths();
-    var solution_exPolygons = ClipperLib.JS.PolyTreeToExPolygons(sss);
-    console.log(solution_exPolygons);
-    color = palette[Math.floor(fxrandom(0, palette.length))];
+    var temps = [[]];
+    for(var qq = 0; qq < pospath.length; qq++){
+        temps[0].push(pospath[qq])
+    }
+    for(var qq = 0; qq < oupaths.length; qq++){
+        let cpru = new ClipperLib.Clipper();
+        var qqLines = new ClipperLib.Paths();
+        cpru.AddPaths(temps, ClipperLib.PolyType.ptSubject, true);
+        cpru.AddPath(oupaths[qq], ClipperLib.PolyType.ptClip, true);
+        cpru.Execute(ClipperLib.ClipType.ctDifference, qqLines);
+        
+        temps = [];
+        for(var qqq = 0; qqq < qqLines.length; qqq++){
+            let temp = [];
+            for(var kkk = 0; kkk < qqLines[qqq].length; kkk++){
+                temp.push({"X": qqLines[qqq][kkk].X, "Y": qqLines[qqq][kkk].Y})
+            }
+            temps.push(temp);
+        }
+    }
+    
+    //cpru.Execute(ClipperLib.ClipType.ctUnion, sss);
+    //var solution_Polygons = new ClipperLib.Paths();
+    //var solution_exPolygons = ClipperLib.JS.PolyTreeToExPolygons(sss);
+    //console.log(solution_exPolygons);
+    /*color = palette[Math.floor(fxrandom(0, palette.length))];
     color = [color[0]+fxrandom(-.1,.1), color[1]+fxrandom(-.1,.1), color[2]+fxrandom(-.1,.1)]
     color = [0, 0, 0];
     var bigid = 0;
@@ -603,20 +625,22 @@ function outlinenew(cubesinfos, spread, pscale, color, pad, distortion){
         p1.add(v.clone().multiplyScalar(fxrandom(0,overshoot))).add(centershift).multiplyScalar(scaw);
         p2.add(v.clone().multiplyScalar(-fxrandom(0,overshoot))).add(centershift).multiplyScalar(scaw);
         //drawLine(p1, p2, 1, 1, color, distortion);
-    }
+    }*/
 
 
     var allLinePaths = [];
-    for(var q = 0; q < allLines.length; q++){
+    for(var q = 0; q < temps.length; q++){
         let allLinePath = [];
-        for(var k = 0; k < allLines[q].length; k++){
-            allLinePath.push({"X": allLines[q][k].X, "Y": allLines[q][k].Y})
+        for(var k = 0; k < temps[q].length; k++){
+            allLinePath.push({"X": temps[q][k].X, "Y": temps[q][k].Y})
         }
         allLinePaths.push(allLinePath);
     }
     color = palette[Math.floor(fxrandom(0, palette.length))];
     color = [color[0]+fxrandom(-.1,.1), color[1]+fxrandom(-.1,.1), color[2]+fxrandom(-.1,.1)]
-    //color = [1, 0, 0];
+    color = palette[Math.floor(fxrandom(0, palette.length))];
+    color = [color[0]+fxrandom(-.1,.1), color[1]+fxrandom(-.1,.1), color[2]+fxrandom(-.1,.1)]
+    //color = [0, 0, 0];
     for(var s = 0; s < allLinePaths.length; s++){
         let path = allLinePaths[s];
         for(var k = 0; k < path.length; k++){
@@ -625,7 +649,7 @@ function outlinenew(cubesinfos, spread, pscale, color, pad, distortion){
             const v = p1.clone().sub(p2).normalize();
             p1.add(v.clone().multiplyScalar(fxrandom(0,overshoot))).add(centershift).multiplyScalar(scaw);
             p2.add(v.clone().multiplyScalar(-fxrandom(0,overshoot))).add(centershift).multiplyScalar(scaw);
-            drawLine(p1, p2, 1, 1, color, distortion);
+            if(fxrand()<1.5) drawLine(p1, p2, 1, 1, color, distortion);
         }
     }
     
@@ -691,8 +715,11 @@ function cubes(){
     
     var bw = fxrand() < .5;
     var ncubes = Math.round(fxrandom(3, 7))*0 + 2 + Math.round(fxrand()*2);
+    ncubes = 1;
     var cubewidth = fxrandom(78, 400)*1.4;
     var cubeheight = fxrandom(78, 400)*2.4;
+    cubewidth = 266;
+    cubeheight = 266;
     if(cubeheight*cubewidth > 100000){
         cubewidth = 100000/cubeheight;
     }
@@ -701,7 +728,9 @@ function cubes(){
     }
     var angle = radians(fxrandom(10, 50));
     angle = radians(fxrandom(5, 88));
+    angle = radians(27);
     var shrt = fxrandom(.1, .5)*0+fxrandom(.4, 1.3)*1;
+    shrt = Math.cos(angle)*.7;
     //if(angle > radians(80) && ncubes < 4 && cubewidth < 150)
     //    shrt = fxrandom(1.7, 2.5);
     var cubesinfos = []
@@ -714,7 +743,7 @@ function cubes(){
     for(var qq = 0; qq < ncubes; qq++){
         
         x = x + cubewidth;
-        var y = fxrandom(-255,255)*0;
+        var y = fxrandom(-255,255);
         //x = fxrandom(-3, 3);
         //y = fxrandom(-3, 3);
         //cubewidth = fxrandom(55, 400);
@@ -818,7 +847,9 @@ function cubes(){
 
     var hue = fxrandom(.0, 1.);
         hue = fxrandom(.0, 1.);
-    outlineold(cubesinfos, 1, 1, color, 18, distortion);
+    color = palette[Math.floor(fxrandom(0, palette.length))];
+    color = [color[0]+fxrandom(-.1,.1), color[1]+fxrandom(-.1,.1), color[2]+fxrandom(-.1,.1)]
+    //outlineold(cubesinfos, 1, 1, color, 18, distortion*.3);
     color = palette[Math.floor(fxrandom(0, palette.length))];
     color = [color[0]+fxrandom(-.1,.1), color[1]+fxrandom(-.1,.1), color[2]+fxrandom(-.1,.1)]
     for(var k = 0; k < cubesinfos.length; k++){
@@ -845,12 +876,14 @@ function cubes(){
         //color = palette[Math.floor(fxrandom(0, palette.length))];
         //color = [color[0]+fxrandom(-.1,.1), color[1]+fxrandom(-.1,.1), color[2]+fxrandom(-.1,.1)]
         //outlinenew([cube], 1, 1, color, 18, distortion);
+        //outlinenew([cube], 1, 1, color, 18, distortion);
     }
+
     color = palette[Math.floor(fxrandom(0, palette.length))];
     color = [color[0]+fxrandom(-.1,.1), color[1]+fxrandom(-.1,.1), color[2]+fxrandom(-.1,.1)]
     //color = [0, 0, 0]
     //outlineold(cubesinfos, 1, 1, color, 18, distortion);
-    outlinenew(cubesinfos, 1, 1, color, 18, distortion);
+    outlinenew(cubesinfos, .8, 1, color, 3, distortion);
 }
 
 
@@ -1421,7 +1454,6 @@ function polygons(pathsc){
     }
 
     
-    
     for(var s = 0; s < paths.length; s++){
         let path = paths[s];
         hue = fxrandom(0, .77);
@@ -1434,24 +1466,11 @@ function polygons(pathsc){
             p1.add(v.clone().multiplyScalar(fxrandom(overshoot*44,overshoot*44))).add(centershift).multiplyScalar(scaw);
             p2.add(v.clone().multiplyScalar(-fxrandom(overshoot*44,overshoot*44))).add(centershift).multiplyScalar(scaw);
             //if(fxrandom(0, 100) > 90)
-            //    drawLine(p1, p2, .08, .027, color, distortion*1);
+                //drawLine(p1, p2, .08, .027, color, distortion*1);
         }
     }
 
     
-    color = palette[Math.floor(fxrandom(0, palette.length))];
-    color = [color[0]+fxrandom(-.1,.1), color[1]+fxrandom(-.1,.1), color[2]+fxrandom(-.1,.1)]
-    for(var s = 0; s < allLinePaths.length; s++){
-        let path = allLinePaths[s];
-        for(var k = 0; k < path.length; k++){
-            const p1 = new THREE.Vector2(path[k].X, path[k].Y);
-            const p2 = new THREE.Vector2(path[(k+1)%path.length].X, path[(k+1)%path.length].Y);
-            const v = p1.clone().sub(p2).normalize();
-            p1.add(v.clone().multiplyScalar(fxrandom(0,overshoot))).add(centershift).multiplyScalar(scaw);
-            p2.add(v.clone().multiplyScalar(-fxrandom(0,overshoot))).add(centershift).multiplyScalar(scaw);
-            //drawLine(p1, p2, 1, 1, color, distortion);
-        }
-    }
 
     for(var u = 0; u < paths.length; u++){
         var hatches = createHatch(paths[u]);
@@ -1493,6 +1512,8 @@ function polygons(pathsc){
         }
     }
 
+    
+
     hue = fxrandom(0, .77);
     var hue = fxrandom(.0, .7);
     var sat = fxrandom(.4, .5);
@@ -1512,13 +1533,29 @@ function polygons(pathsc){
             }
         }
         color = palette[Math.floor(fxrandom(0, palette.length))];
+        color = [color[0]+fxrandom(-.1,.1), color[1]+fxrandom(-.1,.1), color[2]+fxrandom(-.1,.1)]
         for(var k = 0; k < path.length; k++){
             const p1 = new THREE.Vector2(path[k].X, path[k].Y);
             const p2 = new THREE.Vector2(path[(k+1)%path.length].X, path[(k+1)%path.length].Y);
             const v = p1.clone().sub(p2).normalize();
             p1.add(v.clone().multiplyScalar(fxrandom(0,overshoot))).add(centershift).multiplyScalar(scaw);
             p2.add(v.clone().multiplyScalar(-fxrandom(0,overshoot))).add(centershift).multiplyScalar(scaw);
-            drawLine(p1, p2, spread, pscale, color, distortion*.1);
+            drawLine(p1, p2, spread, pscale, color, distortion*.2);
+        }
+    }
+
+    color = palette[Math.floor(fxrandom(0, palette.length))];
+    color = [color[0]+fxrandom(-.1,.1), color[1]+fxrandom(-.1,.1), color[2]+fxrandom(-.1,.1)]
+    color = [1,1,1]
+    for(var s = 0; s < allLinePaths.length; s++){
+        let path = allLinePaths[s];
+        for(var k = 0; k < path.length; k++){
+            const p1 = new THREE.Vector2(path[k].X, path[k].Y);
+            const p2 = new THREE.Vector2(path[(k+1)%path.length].X, path[(k+1)%path.length].Y);
+            const v = p1.clone().sub(p2).normalize();
+            p1.add(v.clone().multiplyScalar(fxrandom(0,overshoot))).add(centershift).multiplyScalar(scaw);
+            p2.add(v.clone().multiplyScalar(-fxrandom(0,overshoot))).add(centershift).multiplyScalar(scaw);
+            //drawLine(p1, p2, 1, 1, color, distortion*.1);
         }
     }
 
@@ -1862,10 +1899,25 @@ function midcube(){
     outline(cubesinfos, 1, 1, color, pad, distortion);
 }
 
+var realfc = 0;
 function animate() {
+    renderer.setRenderTarget(renderTarget);
+    renderer.setClearColor( new THREE.Color(palette[0][0], palette[0][1], palette[0][2]), 1 );
+    renderer.render(scene, camera);
     renderer.setClearColor( new THREE.Color(palette[0][0], palette[0][1], palette[0][2]), 1 );
     renderer.clear();
-    //requestAnimationFrame(animate);
+    //animate();
+    cubes();
+    renderer.setRenderTarget(null);
+    ffmesh.material.uniforms.tDiffuse.value = renderTarget.texture;
+    ffmesh.material.uniforms.resolution.value = [canvasWidth*window.devicePixelRatio, canvasHeight*window.devicePixelRatio];
+    renderer.render(finalscene, camera);
+
+    //scratch(.4*fxrandom(-baseWidth/2, baseWidth/2), .4*fxrandom(-baseHeight/2, baseHeight/2));
+    
+
+    realfc++;
+    requestAnimationFrame(animate);
     if(renderer && false){
         var x1 = -200;
         var y1 = 0;
@@ -1998,7 +2050,7 @@ for(var k = 0; k < palettes.length; k++){
     cols.forEach((e)=>{caca.push(hexToRgb(e))});
     shuffle(caca)
     var coco = [];
-    caca.forEach((e, i)=>{coco.push([(caca[i][0]+fxrandom(-.2, .2)), (caca[i][1]+fxrandom(-.2, .2)), (caca[i][2]+fxrandom(-.2, .2))])});
+    caca.forEach((e, i)=>{coco.push([(caca[i][0]+.01*fxrandom(-.2, .2)), (caca[i][1]+.01*fxrandom(-.2, .2)), (caca[i][2]+.01*fxrandom(-.2, .2))])});
     palettes[k] = coco;
 }
 
@@ -2309,19 +2361,20 @@ function loadData(){
     renderer.render(scene, camera);
     renderer.setClearColor( new THREE.Color(palette[0][0], palette[0][1], palette[0][2]), 1 );
     renderer.clear();
-    //requestAnimationFrame(animate);
     //animate();
-    
+    cubes();
+
     renderer.setRenderTarget(null);
     ffmesh.material.uniforms.tDiffuse.value = renderTarget.texture;
     ffmesh.material.uniforms.resolution.value = [canvasWidth*window.devicePixelRatio, canvasHeight*window.devicePixelRatio];
     renderer.render(finalscene, camera);
 
     //scratch(.4*fxrandom(-baseWidth/2, baseWidth/2), .4*fxrandom(-baseHeight/2, baseHeight/2));
-    cubes();
+    
     //midcube();
     //kdtree();
     //stripes();
+    //requestAnimationFrame(animate);
 
     //polygons();
     //polygonsStable();

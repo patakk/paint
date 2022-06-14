@@ -263,8 +263,31 @@ void main() {
     //texelB.x = texel.x + .2*(pp-texel.x);
     //texelB.y = texel.y + .2*(pp-texel.y);
     //texelB.z = texel.z + .2*(pp-texel.z);
-    vec4 res = texelB + .07*(-.5+rand(xy*.1+mod(ztime*.031, 2.0)));
+    vec4 res = texelB + .00*(-.5+rand(xy*.1+mod(ztime*.031, 2.0)));
 
+    
+    float salt = randomNoise(uv+ztime/1000000.+.3143+ztime*.0000+fbm(uv)*.02);
+    salt = .125*(-.15 + smoothstep(.79, .999, salt));
+    res = .06 + res*(.94 - .06);
+    res.rgb += salt;
+
+    float ff3 = fff(uv*vec2(1343., 1.)*3.+seed1*14., seed1);
+    ff3 = ff3 + .2;
+    ff3 = smoothstep(.26, .9, ff3);
+    
+    float ff4 = fff(uv*vec2(1., 1343.)*3.+seed1*14., seed1);
+    ff4 = ff4 + .2;
+    ff4 = smoothstep(.26, .9, ff4);
+
+
+    if((res.r+res.g+res.b)/3. < .5){
+        float ff5 = .025*(-.5+smoothstep(.1, .9, ff3*ff4));
+        res = res + ff5;
+    }
+    else{
+        float ff5 = .975 + .035*(-.5+smoothstep(.1, .9, ff3*ff4));
+        res = res * ff5;
+    }
     gl_FragColor = vec4( res.rgb, 1.0 );
 
 }

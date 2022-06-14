@@ -2,7 +2,9 @@
       let search = new URLSearchParams(window.location.search)
       let alphabet = "123456789abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ"
       var fxhash = search.get('fxhash') || "oo" + Array(49).fill(0).map(_=>alphabet[(Math.random()*alphabet.length)|0]).join('')
-      //---- fxhash = 'ooK69MqThQZrAy6VaVCEjWiB2UBq6bBskoBBWNdfeNtrDY7n6nM';
+      //---- fxhash = 'ooiaXna5FuUTDjKEiAyzu8Qj9ifxGu7fgKPkzC353acWEeG9az3';
+      //---- fxhash = 'ooxAZGdMVUghUJWHxmP7Qw1gB14D81FChxgVEWcs7ViKHPoPx9x';
+       //----fxhash = 'ooxAZGdMVUghUJWHxmP7Qw1gB14D81FChxgVEWcs7ViKHPoPx9x';
       let b58dec = str=>[...str].reduce((p,c)=>p*alphabet.length+alphabet.indexOf(c)|0, 0)
       let fxhashTrunc = fxhash.slice(2)
       let regex = new RegExp(".{" + ((fxhash.length/4)|0) + "}", 'g')
