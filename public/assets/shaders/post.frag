@@ -263,7 +263,13 @@ void main() {
     //texelB.x = texel.x + .2*(pp-texel.x);
     //texelB.y = texel.y + .2*(pp-texel.y);
     //texelB.z = texel.z + .2*(pp-texel.z);
-    vec4 res = texelB + .07*(-.5+rand(xy*.1+mod(ztime*.031, 2.0)));
+    vec4 res = texelB + .00*(-.5+rand(xy*.1+mod(ztime*.031, 2.0)));
+
+    
+    float salt = randomNoise(uv+ztime/1000000.+.3143+ztime*.0000+fbm(uv)*.02);
+    salt = .125*(-.15 + smoothstep(.79, .999, salt));
+    res = .06 + res*(.94 - .06);
+    res.rgb += salt;
 
     gl_FragColor = vec4( res.rgb, 1.0 );
 
