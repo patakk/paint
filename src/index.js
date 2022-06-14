@@ -5,6 +5,7 @@ import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
 import ClipperLib from 'js-clipper';
+import PoissonDiskSampling from 'poisson-disk-sampling';
 
 const PostProcShader = {
     uniforms: {
@@ -1351,6 +1352,10 @@ function polygons(){
     for(var k = 0; k < clippedPaths.length; k++){
         let clippedPath = clippedPaths[k];
 
+        if(k == 0)
+            marks(clippedPath);
+    
+
         /*var hatches = createHatch(clippedPath);
         for(var h = 0; h < hatches.length; h++){
             let path = hatches[h];
@@ -1370,6 +1375,7 @@ function polygons(){
 
         color = palette[Math.floor(fxrandom(0, palette.length))];
         color = [color[0]+fxrandom(-.1,.1), color[1]+fxrandom(-.1,.1), color[2]+fxrandom(-.1,.1)]
+        if(k == 0)color = [1,0,0]
         for(var q = 0; q < clippedPath.length; q++){
             const p1 = new THREE.Vector2(clippedPath[q].X, clippedPath[q].Y);
             const p2 = new THREE.Vector2(clippedPath[(q+1)%clippedPath.length].X, clippedPath[(q+1)%clippedPath.length].Y);
@@ -1744,6 +1750,75 @@ function loadShadersAndData(){
     loader.load('./assets/shaders/particle.vert',function ( data ) {vShader =  data; runMoreIfDone(); },);
 }
 
+function marks(poly){
+    
+    var minx = 1000000;
+    var miny = 1000000;
+    var maxx = -1000000;
+    var maxy = -1000000;
+    for(var q = 0; q < poly.length; q++){
+        const p1 = new THREE.Vector2(poly[q].X, poly[q].Y);
+        if(p1.x > maxx) maxx = p1.x;
+        if(p1.y > maxy) maxy = p1.y;
+        if(p1.x < minx) minx = p1.x;
+        if(p1.y < miny) miny = p1.y;
+    }
+    var x0 = (minx+maxx)/2;
+    var y0 = (miny+maxy)/2;
+    var w0 = maxx-minx;
+    var h0 = maxy-miny;
+
+    var pds = new PoissonDiskSampling(
+        {
+            shape: [w0, h0],
+            minDistance: 6,
+            maxDistance: 16,
+            tries: 10,
+            distanceFunction: function (point) {
+                return .5;
+            },
+        },
+        fxrand
+    );
+    var points = pds.fill();
+
+    var cpoints = [];
+    points.forEach(element => {
+        var et = [element[0] - w0*.5 + x0, element[1] - h0*.5 + y0];
+        var pt = new ClipperLib.IntPoint(et[0], et[1]);
+        var inpoly = ClipperLib.Clipper.PointInPolygon(pt, poly);
+        if(inpoly)
+            cpoints.push(et)
+    });
+
+    for(var k = 0; k < cpoints.length; k++){
+        var x1 = cpoints[k][0];
+        var y1 = cpoints[k][1];
+
+        var vle = fxrandom(10, 20);
+
+        var ang = fxrandom(0, 2*3.14159);
+        var v = new THREE.Vector2(Math.cos(ang), Math.sin(ang));
+        var x2 = x1 + v.x*vle;
+        var y2 = y1 + v.y*vle;
+
+        var pad = 18;
+        var pscale = 1;
+        var distortion = 33;
+        var spread = .6;
+        var overshoot = 16;
+        var hue, color;
+
+        
+        var color = palette[Math.floor(fxrandom(0, palette.length))%palette.length];
+        var ccolor = [color[0]+fxrandom(-.1,.1), color[1]+fxrandom(-.1,.1), color[2]+fxrandom(-.1,.1)]
+        const p1 = new THREE.Vector2(x1, y1);
+        const p2 = new THREE.Vector2(x2, y2);
+        drawLine(p1, p2, spread, pscale, ccolor, distortion);
+    }
+
+}
+
 function loadData(){
     /*
     canvas2 = document.createElement("canvas");
@@ -1889,7 +1964,7 @@ function loadData(){
 
     polygons();
     //waves();
-    
+
     //renderer.setRenderTarget(null);
     //renderer.render(finalscene, camera);
     //renderer.render( scene, camera );

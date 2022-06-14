@@ -226,7 +226,7 @@ void main() {
 
     float alpha = .1 - .25*power((fff(vec2(u_time,u_time)*.011+0.*index, 31.31+u_seed*.1) + .5)*.68,1.);
     //vColor = vec4(rgb, power(alpha*6., 1.)/6. * u_diffuse.a);
-    vColor = vec4(rgb, .4);
+    vColor = vec4(rgb, .2);
 
     //vColor.r *= .5 + (1.-.5)*2.*random(mvPosition.xy+mod(u_time/100.+.366, 1.0));
     //vColor.g *= .5 + (1.-.5)*2.*random(mvPosition.xy+mod(u_time/100.+.253, 1.0));
