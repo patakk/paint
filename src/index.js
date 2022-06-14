@@ -6,6 +6,8 @@ import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
 import ClipperLib from 'js-clipper';
 
+
+
 const PostProcShader = {
     uniforms: {
         'tDiffuse': {
@@ -460,18 +462,40 @@ function getCubeVertices(cube, padding){
     const p6 = new THREE.Vector2(x+w/2 + shw*Math.cos(angle), y+h/2 + shw*Math.sin(angle));
     const p7 = new THREE.Vector2(x+w/2 + shw*Math.cos(angle), y-h/2 + shw*Math.sin(angle));
 
+    var paths = [
+        [
+            {"X":p1.x,"Y":p1.y},
+            {"X":p2.x,"Y":p2.y},
+            {"X":p3.x,"Y":p3.y},
+            {"X":p4.x,"Y":p4.y},
+            {"X":p5.x,"Y":p5.y},
+            {"X":p6.x,"Y":p6.y},
+            {"X":p7.x,"Y":p7.y},
+        ]
+    ];
+    //var paths = [[{"X":224,"Y":146},{"X":224,"Y":213},{"X":201,"Y":191},{"X":179,"Y":235},{"X":134,"Y":191},{"X":179,"Y":168},{"X":157,"Y":146}]];
+
+    var qqLines = new ClipperLib.Paths();
+    var co = new ClipperLib.ClipperOffset(2, 0.25);
+    var psath = [{X:10,Y:10},{X:110,Y:10},{X:210,Y:10},{X:210,Y:110},{X:10,Y:110},{X:10,Y:160},{X:10,Y:10}];
+
+    co.AddPaths(paths, ClipperLib.JoinType.jtMiter, ClipperLib.EndType.etClosedPolygon);
+    co.Execute(qqLines, +0);
+
+    console.log(qqLines)
+
     return {
-        'p1': p1,
-        'p2': p2,
-        'p3': p3,
-        'p4': p4,
-        'p5': p5,
-        'p6': p6,
-        'p7': p7,
+        'p1': new THREE.Vector2(paths[0][0].X, paths[0][0].Y),
+        'p2': new THREE.Vector2(paths[0][1].X, paths[0][1].Y),
+        'p3': new THREE.Vector2(paths[0][2].X, paths[0][2].Y),
+        'p4': new THREE.Vector2(paths[0][3].X, paths[0][3].Y),
+        'p5': new THREE.Vector2(paths[0][4].X, paths[0][4].Y),
+        'p6': new THREE.Vector2(paths[0][5].X, paths[0][5].Y),
+        'p7': new THREE.Vector2(paths[0][6].X, paths[0][6].Y),
     }
 }
 
-function outlineold(cubesinfos, spread, pscale, color, pad, distortion){
+function outlineold(cubesinfos, spread, pscale, color, pad, distortion, jagged=false){
     points.material.uniforms.u_diffuse.value = [color[0], color[1], color[2], 1.0];
 
     for(var k = 0; k < cubesinfos.length; k++){
@@ -479,12 +503,12 @@ function outlineold(cubesinfos, spread, pscale, color, pad, distortion){
         var cube = cubesinfos[k];
         var cubeall = getCubeVertices(cube, pad);
 
-        drawLine(cubeall.p1, cubeall.p5, spread, pscale, color, distortion);
-        drawLine(cubeall.p5, cubeall.p6, spread, pscale, color, distortion);
-        drawLine(cubeall.p6, cubeall.p7, spread, pscale, color, distortion);
-        drawLine(cubeall.p7, cubeall.p3, spread, pscale, color, distortion);
-        drawLine(cubeall.p3, cubeall.p4, spread, pscale, color, distortion);
-        drawLine(cubeall.p4, cubeall.p1, spread, pscale, color, distortion);
+        if(fxrand() < .725 || !jagged) drawLine(cubeall.p1, cubeall.p5, spread, pscale, color, distortion);
+        if(fxrand() < .725 || !jagged) drawLine(cubeall.p5, cubeall.p6, spread, pscale, color, distortion);
+        if(fxrand() < .725 || !jagged) drawLine(cubeall.p6, cubeall.p7, spread, pscale, color, distortion);
+        if(fxrand() < .725 || !jagged) drawLine(cubeall.p7, cubeall.p3, spread, pscale, color, distortion);
+        if(fxrand() < .725 || !jagged) drawLine(cubeall.p3, cubeall.p4, spread, pscale, color, distortion);
+        if(fxrand() < .725 || !jagged) drawLine(cubeall.p4, cubeall.p1, spread, pscale, color, distortion);
     }
 }
 
@@ -555,7 +579,7 @@ function outlinenew(cubesinfos, spread, pscale, color, pad, distortion){
     }
     var ccx = (minx + maxx)/2;
     var ccy = (miny + maxy)/2;
-    var centershift = new THREE.Vector2(-ccx, -ccy);
+    var centershift = new THREE.Vector2(-ccx, -ccy); // calcualting before the outter edges
     centershift = new THREE.Vector2(0, 0);
     var scawx = 1.;
     var wi = (maxx-minx);
@@ -714,8 +738,7 @@ function cubes(){
     
     
     var bw = fxrand() < .5;
-    var ncubes = Math.round(fxrandom(3, 7))*0 + 2 + Math.round(fxrand()*2);
-    ncubes = 1;
+    var ncubes = Math.round(fxrandom(3, 7))*0 + 1 + Math.round(fxrand()*2);
     var cubewidth = fxrandom(78, 400)*1.4;
     var cubeheight = fxrandom(78, 400)*2.4;
     cubewidth = 266;
@@ -728,9 +751,7 @@ function cubes(){
     }
     var angle = radians(fxrandom(10, 50));
     angle = radians(fxrandom(5, 88));
-    angle = radians(27);
     var shrt = fxrandom(.1, .5)*0+fxrandom(.4, 1.3)*1;
-    shrt = Math.cos(angle)*.7;
     //if(angle > radians(80) && ncubes < 4 && cubewidth < 150)
     //    shrt = fxrandom(1.7, 2.5);
     var cubesinfos = []
@@ -849,7 +870,7 @@ function cubes(){
         hue = fxrandom(.0, 1.);
     color = palette[Math.floor(fxrandom(0, palette.length))];
     color = [color[0]+fxrandom(-.1,.1), color[1]+fxrandom(-.1,.1), color[2]+fxrandom(-.1,.1)]
-    //outlineold(cubesinfos, 1, 1, color, 18, distortion*.3);
+    outlineold(cubesinfos, 1, 1, color, 18, distortion*.3);
     color = palette[Math.floor(fxrandom(0, palette.length))];
     color = [color[0]+fxrandom(-.1,.1), color[1]+fxrandom(-.1,.1), color[2]+fxrandom(-.1,.1)]
     for(var k = 0; k < cubesinfos.length; k++){
@@ -882,8 +903,8 @@ function cubes(){
     color = palette[Math.floor(fxrandom(0, palette.length))];
     color = [color[0]+fxrandom(-.1,.1), color[1]+fxrandom(-.1,.1), color[2]+fxrandom(-.1,.1)]
     //color = [0, 0, 0]
-    //outlineold(cubesinfos, 1, 1, color, 18, distortion);
-    outlinenew(cubesinfos, .8, 1, color, 3, distortion);
+    outlineold(cubesinfos, 1, 1, color, 3, distortion, true);
+    outlinenew(cubesinfos, .8, 1, color, 18, distortion);
 }
 
 
