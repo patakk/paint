@@ -209,15 +209,21 @@ void main() {
     vec3 hsv = vec3(0.);
     vec3 hsvdiffuse = rgb2hsv(u_diffuse.rgb);
 
-    hsv.r = mod(1.0 + hsvdiffuse.r + .4*fff(vec2(u_time,u_time)*.0131, u_seed*.1+index), 1.0);
-    hsv.g = hsvdiffuse.g*.99;
-    hsv.b = hsvdiffuse.b*.93;
+    hsv.r = mod(1.0 + hsvdiffuse.r + .4*0.*fff(vec2(u_time,u_time)*.0131, u_seed*.1+index), 1.0);
+    hsv.g = min(hsvdiffuse.g*.99 + .0*fff(vec2(u_time,u_time)*.0431, u_seed*.21+index), 1.0);
+    hsv.b = min(hsvdiffuse.b * (.8 + .3*smoothstep(.6, .1, fff(vec2(u_time,u_time)*.0431, u_seed*.21+index))), 1.0);
     
     
-    if(mod(index, 3.5) < 0.01 && pscale < 18.){
+    if(mod(index, 3.5) < 0.01 && (pscale < 18.)){
+        hsv.r = mod(hsv.r+0.1, 1.0);
+        hsv.g = hsv.g*.65;
+        hsv.b = min(1.0, 1.3*hsv.b);
+    }
+    
+    if(mod(index+1., 3.5) < 0.01 && (pscale < 18.)){
         hsv.r = mod(hsv.r+0.1, 1.0);
         hsv.g = hsv.g*.5;
-        hsv.b = .44 + .05*hsv.b;
+        hsv.b = .6*hsv.b;
     }
     
 
@@ -226,6 +232,7 @@ void main() {
 
     float alpha = .1 - .25*power((fff(vec2(u_time,u_time)*.011+0.*index, 31.31+u_seed*.1) + .5)*.68,1.);
     //vColor = vec4(rgb, power(alpha*6., 1.)/6. * u_diffuse.a);
+    vColor = vec4(vec3(smoothstep(.1, .3, fff(vec2(u_time,u_time)*.0431, u_seed*.21+index))), .4);
     vColor = vec4(rgb, .4);
 
     //vColor.r *= .5 + (1.-.5)*2.*random(mvPosition.xy+mod(u_time/100.+.366, 1.0));

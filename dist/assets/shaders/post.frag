@@ -212,16 +212,18 @@ void main() {
     vec2 xy = gl_FragCoord.xy;
     vec2 uv = xy / resolution;
 
-    if(flip < 0.1){
+
+    if(flip < 2.){
         //uv = vec2(uv.x, uv.y);
+        uv = vec2(uv.y, uv.x);
     }
-    if(flip < 1.1){
+    else if(flip < 1.1){
         //uv = vec2(uv.x, 1.-uv.y);
     }
-    if(flip < 2.1){
+    else if(flip < 2.1){
         //uv = vec2(1.-uv.x, 1.-uv.y);
     }
-    if(flip < 3.1){
+    else if(flip < 3.1){
         //uv = vec2(1.-uv.x, uv.y);
     }
     //uv = vec2(1.-uv.x, 1.-uv.y);
@@ -239,7 +241,7 @@ void main() {
     float ff = fff(uv*vec2(3., 1.)*3.+seed1*14., seed1);
     ff = ff + .2;
     ff = smoothstep(.6, .9, ff);
-    vec4 texelB = blur(uv, ff*.5*1./resolution.x, dir);
+    //vec4 texelB = blur(uv, ff*.5*1./resolution.x, dir);
     //vec4 texelB2 = blur(uv+vec2(2., 0.)/resolution, ff*5.3*1./resolution.x, dir);
 
     //float sh1 = power((texelB.r+texelB.g+texelB.b)/3., 5.);
@@ -252,8 +254,8 @@ void main() {
     //vec4 texelGray = vec4(vec3( lum ), 1.0);
     //texelGray = texelGray*0.5 + texelB*0.5;
 
-    //vec4 texel = texture2D( tDiffuse, (xy+vec2(+0.0, +0.0)) / resolution );
-    //vec4 texel0 = texture2D( tDiffuse, vec2(.5) );
+    //vec4 texel = texture2D( tDiffuse, (uv+vec2(+0.0, +0.0)) / resolution );
+    vec4 texel = texture2D( tDiffuse, uv );
 
     //vec4 res = texelB*(1.-qq) + texelGray*qq + .0*(-.5+rand(xy*.1));
     //texelB.r = pow(texelB.r, seed1);
@@ -263,13 +265,21 @@ void main() {
     //texelB.x = texel.x + .2*(pp-texel.x);
     //texelB.y = texel.y + .2*(pp-texel.y);
     //texelB.z = texel.z + .2*(pp-texel.z);
-    vec4 res = texelB + .00*(-.5+rand(xy*.1+mod(ztime*.031, 2.0)));
+    vec4 res = texel + .00*(-.5+rand(xy*.1+mod(ztime*.031, 2.0)));
 
     
-    float salt = randomNoise(uv+ztime/1000000.+.3143+ztime*.0000+fbm(uv)*.02);
-    salt = .125*(-.15 + smoothstep(.79, .999, salt));
-    res = .06 + res*(.94 - .06);
-    res.rgb += salt;
+    float salt1 = randomNoise(uv+ztime/1000000.+.3143+ztime*.0000+fbm(uv)*.02);
+    salt1 = (smoothstep(.4, .999, salt1));
+    salt1 = salt1*salt1*salt1*salt1*salt1*salt1*salt1;
+    float salt2 = randomNoise(uv+ztime/1000000.+.2143+ztime*.0000+fbm(uv)*.02);
+    salt2 = (smoothstep(.99, .999, salt2));
+    salt2 = salt2;
+    //res = .06 + res*(.94 - .06);
+    res.rgb += .06*salt1 + .08*salt2;
+
+    float salt3 = .8*randomNoise(uv+ztime/1000000.+.2143+ztime*.0000+fbm(uv)*.02);
+    salt3 = (smoothstep(.05,.22, salt3));
+    res.rgb = res.rgb * ((1.-.03)+.03*salt3);
 
     float ff3 = fff(uv*vec2(1343., 1.)*3.+seed1*14., seed1);
     ff3 = ff3 + .2;
@@ -279,15 +289,18 @@ void main() {
     ff4 = ff4 + .2;
     ff4 = smoothstep(.26, .9, ff4);
 
-
+    vec4 resc = res;
     if((res.r+res.g+res.b)/3. < .5){
         float ff5 = .025*(-.5+smoothstep(.1, .9, ff3*ff4));
-        res = res + ff5;
+        resc = resc + ff5;
     }
     else{
-        float ff5 = .975 + .035*(-.5+smoothstep(.1, .9, ff3*ff4));
-        res = res * ff5;
+        float ff5 = .954 + .046*(-.5+smoothstep(.1, .9, ff3*ff4));
+        resc = resc * ff5;
     }
-    gl_FragColor = vec4( res.rgb, 1.0 );
+    resc.a = 1.0;
+    res = .64*res + .36*resc;
+    res.a = 1.0;
+    gl_FragColor = res;
 
 }

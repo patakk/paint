@@ -20,16 +20,16 @@ const PostProcShader = {
             value: fxrand()
         },
         'flip': {
-            value: fxrandom(0, 4)
+            value: map(fxrand(), 0, 1, 0, 4)
         },
         'seed1': {
-            value: fxrandom(.9, 1.1)
+            value: map(fxrand(), 0, 1, .9, 1.1)
         },
         'seed2': {
-            value: fxrandom(.5, 1.5)
+            value: map(fxrand(), 0, 1, .5, 1.5)
         },
         'seed3': {
-            value: fxrandom(.5, 1.5)
+            value: map(fxrand(), 0, 1, .5, 1.5)
         },
     },
     vertexShader: null,
@@ -56,23 +56,6 @@ function shuffle(array) {
   
     return array;
   }
-// note about the fxrand() function 
-// when the "fxhash" is always the same, it will generate the same sequence of
-// pseudo random numbers, always
-
-//----------------------
-// defining features
-//----------------------
-// You can define some token features by populating the $fxhashFeatures property
-// of the window object.
-// More about it in the guide, section features:
-// [https://fxhash.xyz/articles/guide-mint-generative-token#features]
-//
-// window.$fxhashFeatures = {
-//   "Background": "Black",
-//   "Number of lines": 10,
-//   "Inverted": true
-// }
 
 let camera, scene, renderer, renderTarget, composer;
 var vShader, fShader;
@@ -91,12 +74,9 @@ var paletteCanvas;
 
 var isdown = false;
 
+var coshu = 1;
+
 var seed = fxrand()*10000;
-
-
-function fxrandom(a, b){
-    return a + fxrand()*(b-a);
-}
 
 var wind = 0.0;
 var scrollscale = 1.3;
@@ -108,7 +88,7 @@ var particleSizes = [];
 var particleAngles = [];
 var particleIndices = [];
 
-var horizon = fxrandom(0.7, 0.93);
+var horizon = map(fxrand(), 0, 1, 0.7, 0.93);
 
 var treeGroundSpread;
 
@@ -118,9 +98,32 @@ var sunSpread;
 var isDark;
 var hasSun;
 
+var colorful = fxrand() < .6;
+var verycolorful = fxrand() < .25;
+
+
+function getColorString(colorful, verycolorful) {
+    if(verycolorful){
+        return 'total color';
+    }
+    else{
+        if(colorful){
+            return 'harmonic'
+        }
+        else{
+            return 'solid'
+        }
+    }
+}
+
+
+window.$fxhashFeatures = {
+    "variant": getColorString(colorful, verycolorful),
+}
+
 var backgroundColor;
 
-var offcl = [fxrandom(-42, 14), fxrandom(-37, 34), fxrandom(-37, 37)]
+var offcl = [map(fxrand(), 0, 1, -42, 14), map(fxrand(), 0, 1, -37, 34), map(fxrand(), 0, 1, -37, 37)]
 
 var skyclr = {
     a: [155, 121, 122, 255],
@@ -255,7 +258,7 @@ function onDocumentMouseMove(event) {
     //composer.addPass( luminosityPass );
     
     ffmesh.material.uniforms.tDiffuse.value = renderTarget.texture;
-    ffmesh.material.uniforms.resolution.value = [canvasWidth*window.devicePixelRatio, canvasHeight*window.devicePixelRatio];
+    ffmesh.material.uniforms.resolution.value = [baseWidth*window.devicePixelRatio, canvasHeight*window.devicePixelRatio];
     renderer.render(finalscene, camera);
 }
 
@@ -279,8 +282,8 @@ function drawLine(p1, p2, spread, pscale, color, distortion, individual=0){
         //var nzy = env*distortion*(-.5+power(noise(k*.005+frameCount*.0004, x1*.04+y1*.2855), 4));
         var xx = x1 + p*(x2 - x1);
         var yy = y1 + p*(y2 - y1);
-        var nzx = 2*(1+0*(individual>0))*distortion*(-.5+power(noise((baseWidth/2+xx)*.003,(baseHeight/2+yy)*.003, individual+113.31), 4));
-        var nzy = 2*(1+0*(individual>0))*distortion*(-.5+power(noise((baseWidth/2+xx)*.003,(baseHeight/2+yy)*.003, individual+225.66), 4));
+        var nzx = 1.2*(1+0*(individual>0))*distortion*(-.5+power(noise((baseWidth/2+xx)*.003,(baseHeight/2+yy)*.003, individual+113.31), 4));
+        var nzy = 1.2*(1+0*(individual>0))*distortion*(-.5+power(noise((baseWidth/2+xx)*.003,(baseHeight/2+yy)*.003, individual+225.66), 4));
         xx += nzx;
         yy += nzy;
 
@@ -294,7 +297,7 @@ function drawLine(p1, p2, spread, pscale, color, distortion, individual=0){
     }
     renderer.setRenderTarget(null);
     ffmesh.material.uniforms.tDiffuse.value = renderTarget.texture;
-    ffmesh.material.uniforms.resolution.value = [canvasWidth*window.devicePixelRatio, canvasHeight*window.devicePixelRatio];
+    ffmesh.material.uniforms.resolution.value = [baseWidth*window.devicePixelRatio, canvasHeight*window.devicePixelRatio];
     renderer.render(finalscene, camera);
 }
 
@@ -368,16 +371,16 @@ function drawCube(x, y, w, h, angle, shrt, hue, distortion){
     const pm6 = new THREE.Vector2(x+(w/2-mar) + shw*Math.cos(angle), y+(h/2-mar) + shw*Math.sin(angle));
     const pm7 = new THREE.Vector2(x+(w/2-mar) + shw*Math.cos(angle), y-(h/2-mar) + shw*Math.sin(angle));
 
-    var pscale = fxrandom(.4, .99);
-    var spread = fxrandom(.4, .99);
+    var pscale = map(fxrand(), 0, 1, .4, .99);
+    var spread = map(fxrand(), 0, 1, .4, .99);
 
     var color;
     var satsca = 1;
     if(hue > .62){
         satsca *= .65;
     }
-    var bri = fxrandom(.80, .92);
-    color = HSVtoRGB((hue+fxrandom(-.05, .05)+1.)%1., fxrandom(.4, .74)*satsca, bri + fxrandom(-.1, .1)*.8);
+    var bri = map(fxrand(), 0, 1, .80, .92);
+    color = HSVtoRGB((hue+map(fxrand(), 0, 1, -.05, .05)+1.)%1., map(fxrand(), 0, 1, .4, .74)*satsca, bri + map(fxrand(), 0, 1, -.1, .1)*.8);
     var quadpaths = [];
     
    /*
@@ -421,11 +424,11 @@ function drawCube(x, y, w, h, angle, shrt, hue, distortion){
         {"X":pm1.x, "Y":pm1.y},
     ]);
     
-    color = HSVtoRGB((hue+fxrandom(-.05, .05)+1.)%1., fxrandom(.4, .74)*satsca, bri + fxrandom(-.1, .1)*.8);
+    color = HSVtoRGB((hue+map(fxrand(), 0, 1, -.05, .05)+1.)%1., map(fxrand(), 0, 1, .4, .74)*satsca, bri + map(fxrand(), 0, 1, -.1, .1)*.8);
     spread = spread*.3;
 
     if(fxrand() < 2){
-        //color = HSVtoRGB((hue+fxrandom(-.05, .05)+1.)%1., fxrandom(.6, .94)*satsca, fxrandom(.46, .67));
+        //color = HSVtoRGB((hue+map(fxrand(), 0, 1, -.05, .05)+1.)%1., map(fxrand(), 0, 1, .6, .94)*satsca, map(fxrand(), 0, 1, .46, .67));
     }
     // outline
     //drawLine(p1, p2, spread, pscale, color, distortion, fxrand());
@@ -447,8 +450,8 @@ function drawCube(x, y, w, h, angle, shrt, hue, distortion){
 
 
 function getCubeVertices(cube, padding){
-    const x = cube.x;
-    const y = cube.y;
+    const x = cube.x-padding/4;
+    const y = cube.y-padding/4;
     const w = cube.w+padding;
     const h = cube.h+padding;
     const angle = cube.a;
@@ -482,7 +485,6 @@ function getCubeVertices(cube, padding){
     co.AddPaths(paths, ClipperLib.JoinType.jtMiter, ClipperLib.EndType.etClosedPolygon);
     co.Execute(qqLines, +0);
 
-    console.log(qqLines)
 
     return {
         'p1': new THREE.Vector2(paths[0][0].X, paths[0][0].Y),
@@ -500,6 +502,8 @@ function outlineold(cubesinfos, spread, pscale, color, pad, distortion, jagged=f
 
     for(var k = 0; k < cubesinfos.length; k++){
         
+        //color = palette[Math.floor(map(fxrand(), 0, 1, 0, palette.length))];
+        //color = [color[0]+map(fxrand(), 0, 1, -.1,.1)*coshu, color[1]+map(fxrand(), 0, 1, -.1,.1)*coshu, color[2]+map(fxrand(), 0, 1, -.1,.1)*coshu]
         var cube = cubesinfos[k];
         var cubeall = getCubeVertices(cube, pad);
 
@@ -532,8 +536,7 @@ function outlineblack(cube, spread, pscale, color, pad, distortion){
     if(fxrand() > -.5) drawLine(cubeall.p5, cubeall.p6, spread, pscale, color, distortion);
 }
 
-function outlinenew(cubesinfos, spread, pscale, color, pad, distortion){
-    points.material.uniforms.u_diffuse.value = [color[0], color[1], color[2], 1.0];
+function outlinenew(cubesinfos, spread, pscale, color, pad, distortion, maxdim){
 
     var oupaths = []
     for(var k = 0; k < cubesinfos.length; k++){
@@ -561,8 +564,8 @@ function outlinenew(cubesinfos, spread, pscale, color, pad, distortion){
 
     var pad = 18;
     var pscale = 1;
-    var distortion = 65*.2;
-    var spread = .6;
+    var distortion = 65*.1;
+    //var spread = .6;
     var overshoot = 18;
     //var hue, color;
     
@@ -595,10 +598,10 @@ function outlinenew(cubesinfos, spread, pscale, color, pad, distortion){
     scaw = 1.;
 
     var pospath = [
-        {'X': -600, 'Y': -600},
-        {'X': +600, 'Y': -600},
-        {'X': +600, 'Y': +600},
-        {'X': -600, 'Y': +600},
+        {'X': -maxdim, 'Y': -maxdim},
+        {'X': +maxdim, 'Y': -maxdim},
+        {'X': +maxdim, 'Y': +maxdim},
+        {'X': -maxdim, 'Y': +maxdim},
     ]
 
 
@@ -627,8 +630,8 @@ function outlinenew(cubesinfos, spread, pscale, color, pad, distortion){
     //var solution_Polygons = new ClipperLib.Paths();
     //var solution_exPolygons = ClipperLib.JS.PolyTreeToExPolygons(sss);
     //console.log(solution_exPolygons);
-    /*color = palette[Math.floor(fxrandom(0, palette.length))];
-    color = [color[0]+fxrandom(-.1,.1), color[1]+fxrandom(-.1,.1), color[2]+fxrandom(-.1,.1)]
+    /*color = palette[Math.floor(map(fxrand(), 0, 1, 0, palette.length))];
+    color = [color[0]+map(fxrand(), 0, 1, -.1,.1)*coshu, color[1]+map(fxrand(), 0, 1, -.1,.1)*coshu, color[2]+map(fxrand(), 0, 1, -.1,.1)*coshu]
     color = [0, 0, 0];
     var bigid = 0;
     var bigar = -10000;
@@ -646,8 +649,8 @@ function outlinenew(cubesinfos, spread, pscale, color, pad, distortion){
         const p1 = new THREE.Vector2(expo[k].X, expo[k].Y);
         const p2 = new THREE.Vector2(expo[(k+1)%expo.length].X, expo[(k+1)%expo.length].Y);
         const v = p1.clone().sub(p2).normalize();
-        p1.add(v.clone().multiplyScalar(fxrandom(0,overshoot))).add(centershift).multiplyScalar(scaw);
-        p2.add(v.clone().multiplyScalar(-fxrandom(0,overshoot))).add(centershift).multiplyScalar(scaw);
+        p1.add(v.clone().multiplyScalar(map(fxrand(), 0, 1, 0,overshoot))).add(centershift).multiplyScalar(scaw);
+        p2.add(v.clone().multiplyScalar(-map(fxrand(), 0, 1, 0,overshoot))).add(centershift).multiplyScalar(scaw);
         //drawLine(p1, p2, 1, 1, color, distortion);
     }*/
 
@@ -660,20 +663,29 @@ function outlinenew(cubesinfos, spread, pscale, color, pad, distortion){
         }
         allLinePaths.push(allLinePath);
     }
-    color = palette[Math.floor(fxrandom(0, palette.length))];
-    color = [color[0]+fxrandom(-.1,.1), color[1]+fxrandom(-.1,.1), color[2]+fxrandom(-.1,.1)]
-    color = palette[Math.floor(fxrandom(0, palette.length))];
-    color = [color[0]+fxrandom(-.1,.1), color[1]+fxrandom(-.1,.1), color[2]+fxrandom(-.1,.1)]
     //color = [0, 0, 0];
+    if(fxrand() < .05){
+        if((color[0]+color[1]+color[2])/3 < .5){
+            color = [1, 1, 1];
+        }
+        else{
+            color = [0, 0, 0];
+        }
+    }
     for(var s = 0; s < allLinePaths.length; s++){
+        
         let path = allLinePaths[s];
         for(var k = 0; k < path.length; k++){
             const p1 = new THREE.Vector2(path[k].X, path[k].Y);
             const p2 = new THREE.Vector2(path[(k+1)%path.length].X, path[(k+1)%path.length].Y);
             const v = p1.clone().sub(p2).normalize();
-            p1.add(v.clone().multiplyScalar(fxrandom(0,overshoot))).add(centershift).multiplyScalar(scaw);
-            p2.add(v.clone().multiplyScalar(-fxrandom(0,overshoot))).add(centershift).multiplyScalar(scaw);
-            if(fxrand()<1.5) drawLine(p1, p2, 1, 1, color, distortion);
+            p1.add(v.clone().multiplyScalar(map(fxrand(), 0, 1, 0,overshoot))).add(centershift).multiplyScalar(scaw);
+            p2.add(v.clone().multiplyScalar(-map(fxrand(), 0, 1, 0,overshoot))).add(centershift).multiplyScalar(scaw);
+            if(verycolorful){
+                //color = palette[Math.floor(map(fxrand(), 0, 1, 0, palette.length))];
+                //color = [color[0]+map(fxrand(), 0, 1, -.1,.1)*coshu, color[1]+map(fxrand(), 0, 1, -.1,.1)*coshu, color[2]+map(fxrand(), 0, 1, -.1,.1)*coshu]
+            }
+            if(fxrand()<1.5) drawLine(p1, p2, spread, 1, color, distortion);
         }
     }
     
@@ -738,22 +750,20 @@ function cubes(){
     
     
     var bw = fxrand() < .5;
-    var ncubes = Math.round(fxrandom(3, 7))*0 + 1 + Math.round(fxrand()*2);
-    var cubewidth = fxrandom(78, 400)*1.4;
-    var cubeheight = fxrandom(78, 400)*2.4;
-    cubewidth = 266;
-    cubeheight = 266;
+    var ncubes = Math.round(map(fxrand(), 0, 1, 3, 7))*0 + 1 + Math.round(fxrand()*2);
+    var cubewidth = map(fxrand(), 0, 1, 210, 240)*1.4;
+    var cubeheight = map(fxrand(), 0, 1, 210, 240)*1.4;
     if(cubeheight*cubewidth > 100000){
         cubewidth = 100000/cubeheight;
     }
-    if(cubewidth * ncubes > canvasWidth*.66){
-        //cubewidth = canvasWidth*.66 / ncubes;
+    if(cubewidth * ncubes > baseWidth*.61){
+        cubewidth = baseWidth*.66 / ncubes;
     }
-    var angle = radians(fxrandom(10, 50));
-    angle = radians(fxrandom(5, 88));
-    var shrt = fxrandom(.1, .5)*0+fxrandom(.4, 1.3)*1;
+    var angle = radians(map(fxrand(), 0, 1, 10, 50));
+    angle = radians(map(fxrand(), 0, 1, 20, 70));
+    var shrt = map(fxrand(), 0, 1, .1, .5)*0+map(fxrand(), 0, 1, .4, 1.3)*1;
     //if(angle > radians(80) && ncubes < 4 && cubewidth < 150)
-    //    shrt = fxrandom(1.7, 2.5);
+    //    shrt = map(fxrand(), 0, 1, 1.7, 2.5);
     var cubesinfos = []
     var cubewidtht = cubewidth;
     var minx = 1000000;
@@ -764,11 +774,11 @@ function cubes(){
     for(var qq = 0; qq < ncubes; qq++){
         
         x = x + cubewidth;
-        var y = fxrandom(-255,255);
-        //x = fxrandom(-3, 3);
-        //y = fxrandom(-3, 3);
-        //cubewidth = fxrandom(55, 400);
-        //cubeheight = fxrandom(55, 400);
+        var y = map(fxrand(), 0, 1, -255,255);
+        //x = map(fxrand(), 0, 1, -3, 3);
+        //y = map(fxrand(), 0, 1, -3, 3);
+        //cubewidth = map(fxrand(), 0, 1, 55, 400);
+        //cubeheight = map(fxrand(), 0, 1, 55, 400);
         
         var x = x;
         var y = y;
@@ -777,7 +787,7 @@ function cubes(){
         var a = angle;
         var s = shrt;
         cubesinfos.push({
-            'x': x,
+            'x': x + fxrand()*444-444/2,
             'y': y,
             'w': w,
             'h': h,
@@ -833,27 +843,27 @@ function cubes(){
         }
     }
 
-    var hue = fxrandom(.0, 1.);
-        hue = fxrandom(.0, 1.);
+    var hue = map(fxrand(), 0, 1, .0, 1.);
+        hue = map(fxrand(), 0, 1, .0, 1.);
     var color;
-    var distortion = fxrandom(30, 60)*.5;
+    var distortion = map(fxrand(), 0, 1, 30, 60)*.5;
     //hue = .96;
 
     for(var pad = 18; pad >= 18; pad -= 18*2){
-        var hue2 = fxrandom(.0, 1.);
+        var hue2 = map(fxrand(), 0, 1, .0, 1.);
         while(hue2 > .13 && hue2 < .45 || hue2 > .75 && hue2 < .99 || Math.abs(hue-hue2)<.27)
-            hue2 = fxrandom(.0, 1.);
-        color = HSVtoRGB(hue2, fxrandom(.4, .99), fxrandom(.4, .5)*1.5);
+            hue2 = map(fxrand(), 0, 1, .0, 1.);
+        color = HSVtoRGB(hue2, map(fxrand(), 0, 1, .4, .99), map(fxrand(), 0, 1, .4, .5)*1.5);
         if(hue2 > .13 && hue2 < .5)
-            color = HSVtoRGB(hue2, fxrandom(.4, .55), fxrandom(.4, .5)*1.5);
-        if(fxrandom(0, 100) > 95){
+            color = HSVtoRGB(hue2, map(fxrand(), 0, 1, .4, .55), map(fxrand(), 0, 1, .4, .5)*1.5);
+        if(map(fxrand(), 0, 1, 0, 100) > 95){
             if(fxrand() < .5)
-                color = HSVtoRGB(0,0,fxrandom(0.14, 0.18));
+                color = HSVtoRGB(0,0,map(fxrand(), 0, 1, 0.14, 0.18));
             else
-                color = HSVtoRGB(0,0,fxrandom(0.9, .99));
+                color = HSVtoRGB(0,0,map(fxrand(), 0, 1, 0.9, .99));
         }
         //outline(cubesinfos, 1.5, 1.0, color, pad, distortion);
-        color = HSVtoRGB((hue2+fxrandom(-.07,.07)+1.)%1., fxrandom(.4, .6)*1.5, fxrandom(.4, .5)*1.5);
+        color = HSVtoRGB((hue2+map(fxrand(), 0, 1, -.07,.07)+1.)%1., map(fxrand(), 0, 1, .4, .6)*1.5, map(fxrand(), 0, 1, .4, .5)*1.5);
         //outlineold(cubesinfos, .29, .06, color, pad, distortion);
     }
 
@@ -866,18 +876,18 @@ function cubes(){
     }
     arr = shuffle(arr);
 
-    var hue = fxrandom(.0, 1.);
-        hue = fxrandom(.0, 1.);
-    color = palette[Math.floor(fxrandom(0, palette.length))];
-    color = [color[0]+fxrandom(-.1,.1), color[1]+fxrandom(-.1,.1), color[2]+fxrandom(-.1,.1)]
+    var hue = map(fxrand(), 0, 1, .0, 1.);
+        hue = map(fxrand(), 0, 1, .0, 1.);
+    color = palette[Math.floor(map(fxrand(), 0, 1, 0, palette.length))];
+    color = [color[0]+map(fxrand(), 0, 1, -.1,.1)*coshu, color[1]+map(fxrand(), 0, 1, -.1,.1)*coshu, color[2]+map(fxrand(), 0, 1, -.1,.1)*coshu]
     outlineold(cubesinfos, 1, 1, color, 18, distortion*.3);
-    color = palette[Math.floor(fxrandom(0, palette.length))];
-    color = [color[0]+fxrandom(-.1,.1), color[1]+fxrandom(-.1,.1), color[2]+fxrandom(-.1,.1)]
+    color = palette[Math.floor(map(fxrand(), 0, 1, 0, palette.length))];
+    color = [color[0]+map(fxrand(), 0, 1, -.1,.1)*coshu, color[1]+map(fxrand(), 0, 1, -.1,.1)*coshu, color[2]+map(fxrand(), 0, 1, -.1,.1)*coshu]
     for(var k = 0; k < cubesinfos.length; k++){
         //let cube = cubesinfos[arr[k]];
         let cube = cubesinfos[k];
         //var color;
-        var distortion = fxrandom(30, 60)*.3;
+        var distortion = map(fxrand(), 0, 1, 30, 60)*.3;
         //hue = .96;
         drawCube(cube.x, cube.y, cube.w, cube.h, angle, shrt, hue, distortion);
 
@@ -892,19 +902,33 @@ function cubes(){
             //color = HSVtoRGB(0,0,.8);
         }
 
-        hue = (hue + fxrandom(-.06, .06) + 1.)%1.;
+        hue = (hue + map(fxrand(), 0, 1, -.06, .06) + 1.)%1.;
         //outlineblack(cube, .05, .018, color, 18, 19);
-        //color = palette[Math.floor(fxrandom(0, palette.length))];
-        //color = [color[0]+fxrandom(-.1,.1), color[1]+fxrandom(-.1,.1), color[2]+fxrandom(-.1,.1)]
+        //color = palette[Math.floor(map(fxrand(), 0, 1, 0, palette.length))];
+        //color = [color[0]+map(fxrand(), 0, 1, -.1,.1)*coshu, color[1]+map(fxrand(), 0, 1, -.1,.1)*coshu, color[2]+map(fxrand(), 0, 1, -.1,.1)*coshu]
         //outlinenew([cube], 1, 1, color, 18, distortion);
         //outlinenew([cube], 1, 1, color, 18, distortion);
     }
 
-    color = palette[Math.floor(fxrandom(0, palette.length))];
-    color = [color[0]+fxrandom(-.1,.1), color[1]+fxrandom(-.1,.1), color[2]+fxrandom(-.1,.1)]
-    //color = [0, 0, 0]
-    outlineold(cubesinfos, 1, 1, color, 3, distortion, true);
-    outlinenew(cubesinfos, .8, 1, color, 18, distortion);
+    color = palette[Math.floor(map(fxrand(), 0, 1, 0, palette.length))];
+    color = [color[0]+map(fxrand(), 0, 1, -.1,.1)*coshu, color[1]+map(fxrand(), 0, 1, -.1,.1)*coshu, color[2]+map(fxrand(), 0, 1, -.1,.1)*coshu]
+    //outlineold(cubesinfos, 1, 1, color, 3, distortion);
+
+    color = palette[Math.floor(map(fxrand(), 0, 1, 0, palette.length))];
+    color = [color[0]+map(fxrand(), 0, 1, -.1,.1)*coshu, color[1]+map(fxrand(), 0, 1, -.1,.1)*coshu, color[2]+map(fxrand(), 0, 1, -.1,.1)*coshu]
+    //outlinenew(cubesinfos, 1, 1, color, 1 + 20*1 + 1*10/2, distortion);
+
+    color = palette[Math.floor(map(fxrand(), 0, 1, 0, palette.length))];
+    outlineold(cubesinfos, .6, 1, color, 3, distortion*1);
+    color = [color[0]+map(fxrand(), 0, 1, -.1,.1)*1.500, color[1]+map(fxrand(), 0, 1, -.1,.1)*1.500, color[2]+map(fxrand(), 0, 1, -.1,.1)*1.500]
+    outlineold(cubesinfos, .3, 1, color, 3, distortion*1);
+    
+    var maxdim = 300 + 320*fxrand();
+    color = palette[Math.floor(map(fxrand(), 0, 1, 0, palette.length))];
+    color = [color[0]+map(fxrand(), 0, 1, -.1,.1)*coshu, color[1]+map(fxrand(), 0, 1, -.1,.1)*coshu, color[2]+map(fxrand(), 0, 1, -.1,.1)*coshu]
+    outlinenew(cubesinfos, 1, 1, color, 1 + 40*1 + 1*20/2, distortion, maxdim);
+    color = [min(1.,max(0.,color[0]+map(fxrand(), 0, 1, -.1,.1))), min(1.,max(0.,color[1]+map(fxrand(), 0, 1, -.1,.1))), min(1.,max(0.,color[2]+map(fxrand(), 0, 1, -.1,.1)))]
+    outlinenew(cubesinfos, .46, 1, color, 48, distortion, maxdim);
 }
 
 
@@ -939,29 +963,29 @@ function stripes(){
 
     for(var k = 0; k < num; k++){
         var x = -D/2 + arr[k]*D/num;
-        var y = -D/2 + fxrandom(0, 250)*0;
+        var y = -D/2 + map(fxrand(), 0, 1, 0, 250)*0;
         const p1 = new THREE.Vector2(x, D/2);
         const p2 = new THREE.Vector2(x, y);
 
         
-        var hue = fxrandom(.05, .06);
-        var color = HSVtoRGB((hue+fxrandom(-.1, .1)+1.)%1., fxrandom(.66, .74)*1.2, fxrandom(.56, .8));
+        var hue = map(fxrand(), 0, 1, .05, .06);
+        var color = HSVtoRGB((hue+map(fxrand(), 0, 1, -.1, .1)+1.)%1., map(fxrand(), 0, 1, .66, .74)*1.2, map(fxrand(), 0, 1, .56, .8));
         if(fxrand() < .5){
-            hue = fxrandom(.5905, .590056);
-            color = HSVtoRGB((hue+fxrandom(-.1, .1)+1.)%1., fxrandom(.66, .74)*.4, fxrandom(.22, .36));
+            hue = map(fxrand(), 0, 1, .5905, .590056);
+            color = HSVtoRGB((hue+map(fxrand(), 0, 1, -.1, .1)+1.)%1., map(fxrand(), 0, 1, .66, .74)*.4, map(fxrand(), 0, 1, .22, .36));
         }
 
         drawLine(p1, p2, spread, pscale, color, distortion);
 
         for(var kk = 0; kk < 3; kk++){
-            var yy = p1.y - D/num * Math.round(fxrandom(1, 30))
+            var yy = p1.y - D/num * Math.round(map(fxrand(), 0, 1, 1, 30))
             const p3 = new THREE.Vector2(x, yy);
             const p4 = new THREE.Vector2(x + D-(arr[k]+2)*20, p3.y);
-            var hue = fxrandom(.05, .06);
-            var color = HSVtoRGB((hue+fxrandom(-.1, .1)+1.)%1., fxrandom(.66, .74)*1.2, fxrandom(.56, .8));
+            var hue = map(fxrand(), 0, 1, .05, .06);
+            var color = HSVtoRGB((hue+map(fxrand(), 0, 1, -.1, .1)+1.)%1., map(fxrand(), 0, 1, .66, .74)*1.2, map(fxrand(), 0, 1, .56, .8));
             if(fxrand() < .5){
-                hue = fxrandom(.5905, .590056);
-                color = HSVtoRGB((hue+fxrandom(-.1, .1)+1.)%1., fxrandom(.66, .74)*.4, fxrandom(.22, .36));
+                hue = map(fxrand(), 0, 1, .5905, .590056);
+                color = HSVtoRGB((hue+map(fxrand(), 0, 1, -.1, .1)+1.)%1., map(fxrand(), 0, 1, .66, .74)*.4, map(fxrand(), 0, 1, .22, .36));
             }
             drawLine(p3, p4, spread, pscale, color, distortion);
         }
@@ -990,7 +1014,7 @@ function kdtree(){
           var cut;
           if(it%2 == divi){
           //if(random(100) < 50){
-            var p = fxrandom(.3, .7);
+            var p = map(fxrand(), 0, 1, .3, .7);
             var hh = h*p;
             cut = y - h/2 + h*p;
             var yy = y+h/4;
@@ -998,7 +1022,7 @@ function kdtree(){
             news.push(new Rect(x, cut+(h-hh)/2, w, h-hh, it));
           }
           else{
-            var p = fxrandom(.3, .7);
+            var p = map(fxrand(), 0, 1, .3, .7);
             var ww = w*p;
             cut = x - w/2 + w*p;
             var xx = x+w/4;
@@ -1109,7 +1133,7 @@ function kdtree(){
     var pscale = 1;
     var spread = .5;
     var distortion = 33;
-    var hue = fxrandom(.55, .56);
+    var hue = map(fxrand(), 0, 1, .55, .56);
     var color;
     var bw = Math.floor(2*fxrand())*.9;
     var inset = 1;
@@ -1128,27 +1152,27 @@ function kdtree(){
         const p3 = new THREE.Vector2(x+w/2, y-h/2);
         const p4 = new THREE.Vector2(x-w/2, y-h/2);
         
-        hue = fxrandom(.05, .06);
-        color = HSVtoRGB((hue+fxrandom(-.1, .1)+1.)%1., fxrandom(.66, .74)*1.2, fxrandom(.56, .8));
+        hue = map(fxrand(), 0, 1, .05, .06);
+        color = HSVtoRGB((hue+map(fxrand(), 0, 1, -.1, .1)+1.)%1., map(fxrand(), 0, 1, .66, .74)*1.2, map(fxrand(), 0, 1, .56, .8));
         if(fxrand() < .5){
-            hue = fxrandom(.5905, .590056);
-            color = HSVtoRGB((hue+fxrandom(-.1, .1)+1.)%1., fxrandom(.66, .74)*.4, fxrandom(.22, .36));
+            hue = map(fxrand(), 0, 1, .5905, .590056);
+            color = HSVtoRGB((hue+map(fxrand(), 0, 1, -.1, .1)+1.)%1., map(fxrand(), 0, 1, .66, .74)*.4, map(fxrand(), 0, 1, .22, .36));
         }
 
         var vv = Math.round(fxrand());
-        var hue = .57*vv + fxrandom(-.04, .04);
+        var hue = .57*vv + map(fxrand(), 0, 1, -.04, .04);
         var sat = .8 - .4*vv;
-        var bri = fxrandom(.4, .8)
-        color = HSVtoRGB((hue+fxrandom(-.04, .04)+1.)%1., sat, bri);
+        var bri = map(fxrand(), 0, 1, .4, .8)
+        color = HSVtoRGB((hue+map(fxrand(), 0, 1, -.04, .04)+1.)%1., sat, bri);
         fillQuad(p1, p2, p3, p4, spread, pscale, color, 22);
 
-        color = HSVtoRGB(fxrand(), fxrandom(0, .3), 0.);
+        color = HSVtoRGB(fxrand(), map(fxrand(), 0, 1, 0, .3), 0.);
         //drawLine(p1, p2, .505, .2, color, distortion*.82);
         //drawLine(p2, p3, .505, .2, color, distortion*.82);
         //drawLine(p3, p4, .505, .2, color, distortion*.82);
         //drawLine(p4, p1, .505, .2, color, distortion*.82);
 
-        color = HSVtoRGB(fxrand(), fxrandom(0, .3), .86);
+        color = HSVtoRGB(fxrand(), map(fxrand(), 0, 1, 0, .3), .86);
         //drawLine(p1, p2, .051, .09, color, distortion*.5);
         //drawLine(p2, p3, .051, .09, color, distortion*.5);
         //drawLine(p3, p4, .051, .09, color, distortion*.5);
@@ -1181,11 +1205,11 @@ function kdtree(){
         drawLine(p4, p1, spread, pscale, color, distortion);
     }
 
-    hue = fxrandom(.005, .00056);
-    color = HSVtoRGB((hue+fxrandom(-.1, .1)+1.)%1., fxrandom(.66, .74)*1.2, fxrandom(.56, .8));
+    hue = map(fxrand(), 0, 1, .005, .00056);
+    color = HSVtoRGB((hue+map(fxrand(), 0, 1, -.1, .1)+1.)%1., map(fxrand(), 0, 1, .66, .74)*1.2, map(fxrand(), 0, 1, .56, .8));
     if(fxrand() < .5){
-        hue = fxrandom(.5905, .590056);
-        color = HSVtoRGB((hue+fxrandom(-.1, .1)+1.)%1., fxrandom(.66, .74)*.4, fxrandom(.22, .6));
+        hue = map(fxrand(), 0, 1, .5905, .590056);
+        color = HSVtoRGB((hue+map(fxrand(), 0, 1, -.1, .1)+1.)%1., map(fxrand(), 0, 1, .66, .74)*.4, map(fxrand(), 0, 1, .22, .6));
     }
     //drawLine(new THREE.Vector2(-D/2-inset/2, -D/2-inset/2), new THREE.Vector2(+D/2+inset/2, -D/2-inset/2), spread, pscale, color, distortion);
     //drawLine(new THREE.Vector2(+D/2+inset/2, -D/2-inset/2), new THREE.Vector2(+D/2+inset/2, +D/2+inset/2), spread, pscale, color, distortion);
@@ -1198,7 +1222,7 @@ function createHatch(path){
     if(!path)
         return [];
 
-    var tilt = fxrandom(-100, 100);
+    var tilt = map(fxrand(), 0, 1, -100, 100);
     var hatchFromEdge = 12;
     var spaced = new ClipperLib.Paths();
     var co = new ClipperLib.ClipperOffset(2.0, 0.25);
@@ -1213,7 +1237,7 @@ function createHatch(path){
     }
     path = spacedPath;
 
-    var hatchSpacing = 7;
+    var hatchSpacing = 14;
     var bounds = ClipperLib.JS.BoundsOfPath(path, 1);
 
     var ccx = (bounds.left + bounds.right)/2;
@@ -1221,7 +1245,7 @@ function createHatch(path){
     var bwi = Math.abs(bounds.right - bounds.left)*1.4;
     var bhi = Math.abs(bounds.bottom - bounds.top)*1.4;
     var bbb = bwi>bhi ? bwi : bhi;
-    var angle = fxrandom(0, 2*3.14159);
+    var angle = map(fxrand(), 0, 1, 0, 2*3.14159);
     var dir = new THREE.Vector2(Math.cos(angle), Math.sin(angle));
     var pos0 = new THREE.Vector2(ccx - dir.x*bbb, ccy - dir.y*bbb);
     var pos = new THREE.Vector2(ccx - dir.x*bbb, ccy - dir.y*bbb);
@@ -1272,10 +1296,10 @@ function waves(){
     var color;
     var num = 100;
 
-    var wii = fxrandom(1.2, 2);
-    var depth = fxrandom(300, 300);
-    var offs = fxrandom(0, 100);
-    var frqs = fxrandom(2, 4);
+    var wii = map(fxrand(), 0, 1, 1.2, 2);
+    var depth = map(fxrand(), 0, 1, 300, 300);
+    var offs = map(fxrand(), 0, 1, 0, 100);
+    var frqs = map(fxrand(), 0, 1, 2, 4);
 
     for(var k = 0; k < num; k++){
         var y = D/2 - k*D/num;
@@ -1309,18 +1333,18 @@ function waves(){
             var dr = Math.sqrt((eyer-q)*(eyer-q) + (eyek-k)*(eyek-k));
 
             var eyeslope;
-            eyeslope = fxrandom(2, 4);
+            eyeslope = map(fxrand(), 0, 1, 2, 4);
             var el = power(1-dl/4, eyeslope);
             if(dl > 4) el = 0;
             el = 33*el;
 
-            eyeslope = fxrandom(2, 4);
+            eyeslope = map(fxrand(), 0, 1, 2, 4);
             var er = power(1-dr/4, eyeslope);
             if(dr > 4) er = 0;
             er = 33*er;
 
             var nu = 0;
-            var noseslope = fxrandom(2, 4);
+            var noseslope = map(fxrand(), 0, 1, 2, 4);
             if(k >= nosek1 && k <= nosek2){
                 var p1 = map(k, nosek1, nosek2, 0, 1);
                 var p2 = power(1-Math.abs(q - noseq)/(p1 * nosew), noseslope);
@@ -1340,8 +1364,8 @@ function waves(){
             pts.push([new THREE.Vector2(x1, yy), fxy]);
         }
 
-        color = palette[Math.floor(fxrandom(0, palette.length))];
-        color = [color[0]+fxrandom(-.1,.1), color[1]+fxrandom(-.1,.1), color[2]+fxrandom(-.1,.1)]
+        color = palette[Math.floor(map(fxrand(), 0, 1, 0, palette.length))];
+        color = [color[0]+map(fxrand(), 0, 1, -.1,.1)*coshu, color[1]+map(fxrand(), 0, 1, -.1,.1)*coshu, color[2]+map(fxrand(), 0, 1, -.1,.1)*coshu]
         for(var p = 0; p < pts.length-1; p++){
             const p1 = pts[p][0];
             const p2 = pts[p+1][0];
@@ -1360,12 +1384,12 @@ function polygons(pathsc){
     else{
         var givespace = 13;
         for(var k = 0; k < 3; k++){
-            var x = fxrandom(-baseWidth/2*.1, baseWidth/2*.1);
-            var y = fxrandom(-baseWidth/2*.1, baseWidth/2*.1);
-            var radius = fxrandom(300, 380)*1.4;
+            var x = map(fxrand(), 0, 1, -baseWidth/2*.1, baseWidth/2*.1);
+            var y = map(fxrand(), 0, 1, -baseWidth/2*.1, baseWidth/2*.1);
+            var radius = map(fxrand(), 0, 1, 300, 380)*1.4;
     
             let path = [];
-            var qs = Math.round(fxrandom(4, 4));
+            var qs = Math.round(map(fxrand(), 0, 1, 4, 4));
             if(k >= 0){
                 //qs *= 18;
             }
@@ -1373,15 +1397,15 @@ function polygons(pathsc){
                 var p = map(q, 0, qs, 0, 1);
                 var angle = radians(p*360);
                 var r = radius + radius*(-.5 + power(noise((Math.cos(angle)+0.)*1, (Math.sin(angle)+1.)*1, 31.3*k), 3));
-                var raa = radians(fxrandom(-360/qs/2, 360/qs/2))*.1;
+                var raa = radians(map(fxrand(), 0, 1, -360/qs/2, 360/qs/2))*.1;
                 var xx = x + r * Math.cos(angle+raa+3.14159/4);
                 var yy = y + r * Math.sin(angle+raa+3.14159/4);
     
                 if(k > 0){
-                    x = fxrandom(-baseWidth/2*.3, baseWidth/2*.3);
-                    y = fxrandom(-baseWidth/2*.3, baseWidth/2*.3);
+                    x = map(fxrand(), 0, 1, -baseWidth/2*.3, baseWidth/2*.3);
+                    y = map(fxrand(), 0, 1, -baseWidth/2*.3, baseWidth/2*.3);
                     r = radius*.85 + radius*.7*(-.5 + power(noise((Math.cos(angle)+0.)*1, (Math.sin(angle)+1.)*1, 31.3*k), 3));
-                    raa = radians(fxrandom(-360/qs/2, 360/qs/2))*.1;
+                    raa = radians(map(fxrand(), 0, 1, -360/qs/2, 360/qs/2))*.1;
                     xx = x + 1*r * Math.cos(angle+raa+3.14159/4);
                     yy = y + 1*r * Math.sin(angle+raa+3.14159/4);
                 }
@@ -1428,7 +1452,7 @@ function polygons(pathsc){
     var pscale = 1;
     var distortion = 65;
     var spread = .6;
-    var overshoot = 16;
+    var overshoot = 3;
     var hue, color;
 
     var minx = +10000;
@@ -1457,7 +1481,6 @@ function polygons(pathsc){
         scawy = 1./(hi/baseHeight)*.8;
     }
     var scaw = min(scawx, scawy);
-    scaw = 1.;
 
     
     var allLines = new ClipperLib.Paths();
@@ -1477,16 +1500,16 @@ function polygons(pathsc){
     
     for(var s = 0; s < paths.length; s++){
         let path = paths[s];
-        hue = fxrandom(0, .77);
+        hue = map(fxrand(), 0, 1, 0, .77);
         color = HSVtoRGB(hue, 0.1, .3);
         color = palette[0];
         for(var k = 0; k < path.length; k++){
             const p1 = new THREE.Vector2(path[k].X, path[k].Y);
             const p2 = new THREE.Vector2(path[(k+1)%path.length].X, path[(k+1)%path.length].Y);
             const v = p1.clone().sub(p2).normalize();
-            p1.add(v.clone().multiplyScalar(fxrandom(overshoot*44,overshoot*44))).add(centershift).multiplyScalar(scaw);
-            p2.add(v.clone().multiplyScalar(-fxrandom(overshoot*44,overshoot*44))).add(centershift).multiplyScalar(scaw);
-            //if(fxrandom(0, 100) > 90)
+            p1.add(v.clone().multiplyScalar(map(fxrand(), 0, 1, overshoot*44,overshoot*44))).add(centershift).multiplyScalar(scaw);
+            p2.add(v.clone().multiplyScalar(-map(fxrand(), 0, 1, overshoot*44,overshoot*44))).add(centershift).multiplyScalar(scaw);
+            //if(map(fxrand(), 0, 1, 0, 100) > 90)
                 //drawLine(p1, p2, .08, .027, color, distortion*1);
         }
     }
@@ -1495,78 +1518,77 @@ function polygons(pathsc){
 
     for(var u = 0; u < paths.length; u++){
         var hatches = createHatch(paths[u]);
-        var hue = fxrandom(.0, .7);
-        var sat = fxrandom(.4, .97);
-        var bri = fxrandom(.4, .97);
+        var hue = map(fxrand(), 0, 1, .0, .7);
+        var sat = map(fxrand(), 0, 1, .4, .97);
+        var bri = map(fxrand(), 0, 1, .4, .97);
         if(hue > 0.1 && hue < .45){
-            hue = fxrandom(0.45, 1.05)%1.;
+            hue = map(fxrand(), 0, 1, 0.45, 1.05)%1.;
         }
         if(fxrand() < .3){
-            hue = fxrandom(0, 0.03);
-            sat = fxrandom(.8, .99)
-            bri = fxrandom(.5, .99);
+            hue = map(fxrand(), 0, 1, 0, 0.03);
+            sat = map(fxrand(), 0, 1, .8, .99)
+            bri = map(fxrand(), 0, 1, .5, .99);
         }
         color = HSVtoRGB(hue, sat, bri);
-        color = [color[0]+fxrandom(-.1,.1), color[1]+fxrandom(-.1,.1), color[2]+fxrandom(-.1,.1)]
-        var xoloff = Math.floor(fxrandom(0, palette.length));
-        var colparts = 1 + Math.floor(fxrandom(0, 3));
-        var colorful = false;
-        if(fxrand() < 1.5){
-            colorful = true;
-        }
-        color = palette[Math.floor(fxrandom(0, palette.length/colparts) + xoloff)%palette.length];
+        color = [color[0]+map(fxrand(), 0, 1, -.1,.1)*coshu, color[1]+map(fxrand(), 0, 1, -.1,.1)*coshu, color[2]+map(fxrand(), 0, 1, -.1,.1)*coshu]
+        var xoloff = Math.floor(map(fxrand(), 0, 1, 0, palette.length));
+        var colparts = 1 + Math.floor(map(fxrand(), 0, 1, 0, 3));
+        color = palette[Math.floor(map(fxrand(), 0, 1, 0, palette.length/colparts) + xoloff)%palette.length];
         for(var h = 0; h < hatches.length; h++){
             let path = hatches[h];
-            //color = HSVtoRGB(hue, sat+fxrandom(-.3, .0), bri+fxrandom(-.3, .0));
+            //color = HSVtoRGB(hue, sat+map(fxrand(), 0, 1, -.3, .0), bri+map(fxrand(), 0, 1, -.3, .0));
             if(colorful){
-                color = palette[Math.floor(fxrandom(0, palette.length/colparts) + xoloff)%palette.length];
+                color = palette[Math.floor(map(fxrand(), 0, 1, 0, palette.length/colparts) + xoloff)%palette.length];
             }
-            var ccolor = [color[0]+fxrandom(-.1,.1), color[1]+fxrandom(-.1,.1), color[2]+fxrandom(-.1,.1)]
             for(var k = 0; k < path.length; k++){
                 const p1 = new THREE.Vector2(path[k].X, path[k].Y);
                 const p2 = new THREE.Vector2(path[(k+1)%path.length].X, path[(k+1)%path.length].Y);
                 const v = p1.clone().sub(p2).normalize();
-                p1.add(v.clone().multiplyScalar(fxrandom(0,0))).add(centershift).multiplyScalar(scaw);
-                p2.add(v.clone().multiplyScalar(-fxrandom(0,0))).add(centershift).multiplyScalar(scaw);
-                drawLine(p1, p2, spread, pscale, ccolor, distortion*.5, h+k);
+                p1.add(v.clone().multiplyScalar(map(fxrand(), 0, 1, 0,0))).add(centershift).multiplyScalar(scaw);
+                p2.add(v.clone().multiplyScalar(-map(fxrand(), 0, 1, 0,0))).add(centershift).multiplyScalar(scaw);
+                if(verycolorful){
+                    color = palette[Math.floor(map(fxrand(), 0, 1, 0, palette.length/colparts) + xoloff)%palette.length];
+                    color = [color[0]+map(fxrand(), 0, 1, -.1,.1)*coshu, color[1]+map(fxrand(), 0, 1, -.1,.1)*coshu, color[2]+map(fxrand(), 0, 1, -.1,.1)*coshu]
+                }
+                drawLine(p1, p2, spread*1.214, pscale, color, distortion*.5, h+k);
             }
         }
     }
 
     
 
-    hue = fxrandom(0, .77);
-    var hue = fxrandom(.0, .7);
-    var sat = fxrandom(.4, .5);
-    var bri = fxrandom(.6, .97);
+    hue = map(fxrand(), 0, 1, 0, .77);
+    var hue = map(fxrand(), 0, 1, .0, .7);
+    var sat = map(fxrand(), 0, 1, .4, .5);
+    var bri = map(fxrand(), 0, 1, .6, .97);
     if(hue > 0.1 && hue < .45){
         sat *= .5;
     }
     for(var s = 0; s < paths.length; s++){
         let path = paths[s];
-        color = HSVtoRGB((hue + fxrandom(-.1, .1)+1.)%1, sat, bri);
-        if(fxrandom(0, 100) > 90){
-            var hue = fxrandom(.0, .7);
-            var sat = fxrandom(.4, .5);
-            var bri = fxrandom(.6, .97);
+        color = HSVtoRGB((hue + map(fxrand(), 0, 1, -.1, .1)+1.)%1, sat, bri);
+        if(map(fxrand(), 0, 1, 0, 100) > 90){
+            var hue = map(fxrand(), 0, 1, .0, .7);
+            var sat = map(fxrand(), 0, 1, .4, .5);
+            var bri = map(fxrand(), 0, 1, .6, .97);
             if(hue > 0.1 && hue < .45){
                 sat *= .5;
             }
         }
-        color = palette[Math.floor(fxrandom(0, palette.length))];
-        color = [color[0]+fxrandom(-.1,.1), color[1]+fxrandom(-.1,.1), color[2]+fxrandom(-.1,.1)]
+        color = palette[Math.floor(map(fxrand(), 0, 1, 0, palette.length))];
+        color = [color[0]+map(fxrand(), 0, 1, -.1,.1)*coshu, color[1]+map(fxrand(), 0, 1, -.1,.1)*coshu, color[2]+map(fxrand(), 0, 1, -.1,.1)*coshu]
         for(var k = 0; k < path.length; k++){
             const p1 = new THREE.Vector2(path[k].X, path[k].Y);
             const p2 = new THREE.Vector2(path[(k+1)%path.length].X, path[(k+1)%path.length].Y);
             const v = p1.clone().sub(p2).normalize();
-            p1.add(v.clone().multiplyScalar(fxrandom(0,overshoot))).add(centershift).multiplyScalar(scaw);
-            p2.add(v.clone().multiplyScalar(-fxrandom(0,overshoot))).add(centershift).multiplyScalar(scaw);
+            p1.add(v.clone().multiplyScalar(map(fxrand(), 0, 1, 0,overshoot))).add(centershift).multiplyScalar(scaw);
+            p2.add(v.clone().multiplyScalar(-map(fxrand(), 0, 1, 0,overshoot))).add(centershift).multiplyScalar(scaw);
             drawLine(p1, p2, spread, pscale, color, distortion*.2);
         }
     }
 
-    color = palette[Math.floor(fxrandom(0, palette.length))];
-    color = [color[0]+fxrandom(-.1,.1), color[1]+fxrandom(-.1,.1), color[2]+fxrandom(-.1,.1)]
+    color = palette[Math.floor(map(fxrand(), 0, 1, 0, palette.length))];
+    color = [color[0]+map(fxrand(), 0, 1, -.1,.1)*coshu, color[1]+map(fxrand(), 0, 1, -.1,.1)*coshu, color[2]+map(fxrand(), 0, 1, -.1,.1)*coshu]
     color = [1,1,1]
     for(var s = 0; s < allLinePaths.length; s++){
         let path = allLinePaths[s];
@@ -1574,8 +1596,8 @@ function polygons(pathsc){
             const p1 = new THREE.Vector2(path[k].X, path[k].Y);
             const p2 = new THREE.Vector2(path[(k+1)%path.length].X, path[(k+1)%path.length].Y);
             const v = p1.clone().sub(p2).normalize();
-            p1.add(v.clone().multiplyScalar(fxrandom(0,overshoot))).add(centershift).multiplyScalar(scaw);
-            p2.add(v.clone().multiplyScalar(-fxrandom(0,overshoot))).add(centershift).multiplyScalar(scaw);
+            p1.add(v.clone().multiplyScalar(map(fxrand(), 0, 1, 0,overshoot))).add(centershift).multiplyScalar(scaw);
+            p2.add(v.clone().multiplyScalar(-map(fxrand(), 0, 1, 0,overshoot))).add(centershift).multiplyScalar(scaw);
             //drawLine(p1, p2, 1, 1, color, distortion*.1);
         }
     }
@@ -1586,29 +1608,29 @@ function polygons(pathsc){
         /*var hatches = createHatch(clippedPath);
         for(var h = 0; h < hatches.length; h++){
             let path = hatches[h];
-            //color = HSVtoRGB(hue, sat+fxrandom(-.3, .0), bri+fxrandom(-.3, .0));
-            color = palette[Math.floor(fxrandom(0, palette.length))];
+            //color = HSVtoRGB(hue, sat+map(fxrand(), 0, 1, -.3, .0), bri+map(fxrand(), 0, 1, -.3, .0));
+            color = palette[Math.floor(map(fxrand(), 0, 1, 0, palette.length))];
             //color = palette[Math.floor(palette.length*h/hatches.length)];
-            var ccolor = [color[0]+fxrandom(-.1,.1), color[1]+fxrandom(-.1,.1), color[2]+fxrandom(-.1,.1)]
+            var ccolor = [color[0]+map(fxrand(), 0, 1, -.1,.1)*coshu, color[1]+map(fxrand(), 0, 1, -.1,.1)*coshu, color[2]+map(fxrand(), 0, 1, -.1,.1)*coshu]
             for(var rr = 0; rr < path.length; rr++){
                 const p1 = new THREE.Vector2(path[rr].X, path[rr].Y);
                 const p2 = new THREE.Vector2(path[(rr+1)%path.length].X, path[(rr+1)%path.length].Y);
                 const v = p1.clone().sub(p2).normalize();
-                p1.add(v.clone().multiplyScalar(fxrandom(0,0))).add(centershift).multiplyScalar(scaw);
-                p2.add(v.clone().multiplyScalar(-fxrandom(0,0))).add(centershift).multiplyScalar(scaw);
+                p1.add(v.clone().multiplyScalar(map(fxrand(), 0, 1, 0,0))).add(centershift).multiplyScalar(scaw);
+                p2.add(v.clone().multiplyScalar(-map(fxrand(), 0, 1, 0,0))).add(centershift).multiplyScalar(scaw);
                 //drawLine(p1, p2, spread, pscale, ccolor, distortion*.5, h+k);
             }
         }*/
 
-        color = palette[Math.floor(fxrandom(0, palette.length))];
-        color = [color[0]+fxrandom(-.1,.1), color[1]+fxrandom(-.1,.1), color[2]+fxrandom(-.1,.1)]
+        color = palette[Math.floor(map(fxrand(), 0, 1, 0, palette.length))];
+        color = [color[0]+map(fxrand(), 0, 1, -.1,.1)*coshu, color[1]+map(fxrand(), 0, 1, -.1,.1)*coshu, color[2]+map(fxrand(), 0, 1, -.1,.1)*coshu]
         for(var q = 0; q < clippedPath.length; q++){
             const p1 = new THREE.Vector2(clippedPath[q].X, clippedPath[q].Y);
             const p2 = new THREE.Vector2(clippedPath[(q+1)%clippedPath.length].X, clippedPath[(q+1)%clippedPath.length].Y);
             const v = p1.clone().sub(p2).normalize();
-            p1.add(v.clone().multiplyScalar(fxrandom(0,overshoot))).add(centershift).multiplyScalar(scaw);
-            p2.add(v.clone().multiplyScalar(-fxrandom(0,overshoot))).add(centershift).multiplyScalar(scaw);
-            //drawLine(p1, p2, spread, pscale, color, distortion);
+            p1.add(v.clone().multiplyScalar(map(fxrand(), 0, 1, 0,overshoot))).add(centershift).multiplyScalar(scaw);
+            p2.add(v.clone().multiplyScalar(-map(fxrand(), 0, 1, 0,overshoot))).add(centershift).multiplyScalar(scaw);
+            //drawLine(p1, p2, spread, pscale, color, distortion*.14);
         }
     }
 
@@ -1622,12 +1644,12 @@ function polygonsStable(){
     var givespace = 13;
     var paths = [];
     for(var k = 0; k < 3; k++){
-        var x = fxrandom(-baseWidth/2*.1, baseWidth/2*.1);
-        var y = fxrandom(-baseWidth/2*.1, baseWidth/2*.1);
-        var radius = fxrandom(300, 380)*1.4;
+        var x = map(fxrand(), 0, 1, -baseWidth/2*.1, baseWidth/2*.1);
+        var y = map(fxrand(), 0, 1, -baseWidth/2*.1, baseWidth/2*.1);
+        var radius = map(fxrand(), 0, 1, 300, 380)*1.4;
 
         let path = [];
-        var qs = Math.round(fxrandom(4, 4));
+        var qs = Math.round(map(fxrand(), 0, 1, 4, 4));
         if(k >= 0){
             //qs *= 18;
         }
@@ -1635,15 +1657,15 @@ function polygonsStable(){
             var p = map(q, 0, qs, 0, 1);
             var angle = radians(p*360);
             var r = radius + radius*(-.5 + power(noise((Math.cos(angle)+0.)*1, (Math.sin(angle)+1.)*1, 31.3*k), 3));
-            var raa = radians(fxrandom(-360/qs/2, 360/qs/2))*.1;
+            var raa = radians(map(fxrand(), 0, 1, -360/qs/2, 360/qs/2))*.1;
             var xx = x + r * Math.cos(angle+raa+3.14159/4);
             var yy = y + r * Math.sin(angle+raa+3.14159/4);
 
             if(k > 0){
-                x = fxrandom(-baseWidth/2*.3, baseWidth/2*.3);
-                y = fxrandom(-baseWidth/2*.3, baseWidth/2*.3);
+                x = map(fxrand(), 0, 1, -baseWidth/2*.3, baseWidth/2*.3);
+                y = map(fxrand(), 0, 1, -baseWidth/2*.3, baseWidth/2*.3);
                 r = radius*.85 + radius*.7*(-.5 + power(noise((Math.cos(angle)+0.)*1, (Math.sin(angle)+1.)*1, 31.3*k), 3));
-                raa = radians(fxrandom(-360/qs/2, 360/qs/2))*.1;
+                raa = radians(map(fxrand(), 0, 1, -360/qs/2, 360/qs/2))*.1;
                 xx = x + 1*r * Math.cos(angle+raa+3.14159/4);
                 yy = y + 1*r * Math.sin(angle+raa+3.14159/4);
             }
@@ -1738,100 +1760,96 @@ function polygonsStable(){
     
     for(var s = 0; s < paths.length; s++){
         let path = paths[s];
-        hue = fxrandom(0, .77);
+        hue = map(fxrand(), 0, 1, 0, .77);
         color = HSVtoRGB(hue, 0.1, .3);
         color = palette[0];
         for(var k = 0; k < path.length; k++){
             const p1 = new THREE.Vector2(path[k].X, path[k].Y);
             const p2 = new THREE.Vector2(path[(k+1)%path.length].X, path[(k+1)%path.length].Y);
             const v = p1.clone().sub(p2).normalize();
-            p1.add(v.clone().multiplyScalar(fxrandom(overshoot*44,overshoot*44))).add(centershift).multiplyScalar(scaw);
-            p2.add(v.clone().multiplyScalar(-fxrandom(overshoot*44,overshoot*44))).add(centershift).multiplyScalar(scaw);
-            //if(fxrandom(0, 100) > 90)
+            p1.add(v.clone().multiplyScalar(map(fxrand(), 0, 1, overshoot*44,overshoot*44))).add(centershift).multiplyScalar(scaw);
+            p2.add(v.clone().multiplyScalar(-map(fxrand(), 0, 1, overshoot*44,overshoot*44))).add(centershift).multiplyScalar(scaw);
+            //if(map(fxrand(), 0, 1, 0, 100) > 90)
             //    drawLine(p1, p2, .08, .027, color, distortion*1);
         }
     }
 
     
-    color = palette[Math.floor(fxrandom(0, palette.length))];
-    color = [color[0]+fxrandom(-.1,.1), color[1]+fxrandom(-.1,.1), color[2]+fxrandom(-.1,.1)]
+    color = palette[Math.floor(map(fxrand(), 0, 1, 0, palette.length))];
+    color = [color[0]+map(fxrand(), 0, 1, -.1,.1)*coshu, color[1]+map(fxrand(), 0, 1, -.1,.1)*coshu, color[2]+map(fxrand(), 0, 1, -.1,.1)*coshu]
     for(var s = 0; s < allLinePaths.length; s++){
         let path = allLinePaths[s];
         for(var k = 0; k < path.length; k++){
             const p1 = new THREE.Vector2(path[k].X, path[k].Y);
             const p2 = new THREE.Vector2(path[(k+1)%path.length].X, path[(k+1)%path.length].Y);
             const v = p1.clone().sub(p2).normalize();
-            p1.add(v.clone().multiplyScalar(fxrandom(0,overshoot))).add(centershift).multiplyScalar(scaw);
-            p2.add(v.clone().multiplyScalar(-fxrandom(0,overshoot))).add(centershift).multiplyScalar(scaw);
+            p1.add(v.clone().multiplyScalar(map(fxrand(), 0, 1, 0,overshoot))).add(centershift).multiplyScalar(scaw);
+            p2.add(v.clone().multiplyScalar(-map(fxrand(), 0, 1, 0,overshoot))).add(centershift).multiplyScalar(scaw);
             //drawLine(p1, p2, 1, 1, color, distortion);
         }
     }
 
     for(var u = 1; u < paths.length; u++){
         var hatches = createHatch(paths[u]);
-        var hue = fxrandom(.0, .7);
-        var sat = fxrandom(.4, .97);
-        var bri = fxrandom(.4, .97);
+        var hue = map(fxrand(), 0, 1, .0, .7);
+        var sat = map(fxrand(), 0, 1, .4, .97);
+        var bri = map(fxrand(), 0, 1, .4, .97);
         if(hue > 0.1 && hue < .45){
-            hue = fxrandom(0.45, 1.05)%1.;
+            hue = map(fxrand(), 0, 1, 0.45, 1.05)%1.;
         }
         if(fxrand() < .3){
-            hue = fxrandom(0, 0.03);
-            sat = fxrandom(.8, .99)
-            bri = fxrandom(.5, .99);
+            hue = map(fxrand(), 0, 1, 0, 0.03);
+            sat = map(fxrand(), 0, 1, .8, .99)
+            bri = map(fxrand(), 0, 1, .5, .99);
         }
         color = HSVtoRGB(hue, sat, bri);
-        color = [color[0]+fxrandom(-.1,.1), color[1]+fxrandom(-.1,.1), color[2]+fxrandom(-.1,.1)]
-        var xoloff = Math.floor(fxrandom(0, palette.length));
-        var colparts = 1 + Math.floor(fxrandom(0, 3));
-        var colorful = false;
-        if(fxrand() < 1.5){
-            colorful = true;
-        }
-        color = palette[Math.floor(fxrandom(0, palette.length/colparts) + xoloff)%palette.length];
+        color = [color[0]+map(fxrand(), 0, 1, -.1,.1)*coshu, color[1]+map(fxrand(), 0, 1, -.1,.1)*coshu, color[2]+map(fxrand(), 0, 1, -.1,.1)*coshu]
+        var xoloff = Math.floor(map(fxrand(), 0, 1, 0, palette.length));
+        var colparts = 1 + Math.floor(map(fxrand(), 0, 1, 0, 3));
+        color = palette[Math.floor(map(fxrand(), 0, 1, 0, palette.length/colparts) + xoloff)%palette.length];
         for(var h = 0; h < hatches.length; h++){
             let path = hatches[h];
-            //color = HSVtoRGB(hue, sat+fxrandom(-.3, .0), bri+fxrandom(-.3, .0));
+            //color = HSVtoRGB(hue, sat+map(fxrand(), 0, 1, -.3, .0), bri+map(fxrand(), 0, 1, -.3, .0));
             if(colorful){
-                color = palette[Math.floor(fxrandom(0, palette.length/colparts) + xoloff)%palette.length];
+                color = palette[Math.floor(map(fxrand(), 0, 1, 0, palette.length/colparts) + xoloff)%palette.length];
             }
-            var ccolor = [color[0]+fxrandom(-.1,.1), color[1]+fxrandom(-.1,.1), color[2]+fxrandom(-.1,.1)]
+            var ccolor = [color[0]+map(fxrand(), 0, 1, -.1,.1)*coshu, color[1]+map(fxrand(), 0, 1, -.1,.1)*coshu, color[2]+map(fxrand(), 0, 1, -.1,.1)*coshu]
             for(var k = 0; k < path.length; k++){
                 const p1 = new THREE.Vector2(path[k].X, path[k].Y);
                 const p2 = new THREE.Vector2(path[(k+1)%path.length].X, path[(k+1)%path.length].Y);
                 const v = p1.clone().sub(p2).normalize();
-                p1.add(v.clone().multiplyScalar(fxrandom(0,0))).add(centershift).multiplyScalar(scaw);
-                p2.add(v.clone().multiplyScalar(-fxrandom(0,0))).add(centershift).multiplyScalar(scaw);
+                p1.add(v.clone().multiplyScalar(map(fxrand(), 0, 1, 0,0))).add(centershift).multiplyScalar(scaw);
+                p2.add(v.clone().multiplyScalar(-map(fxrand(), 0, 1, 0,0))).add(centershift).multiplyScalar(scaw);
                 //drawLine(p1, p2, spread, pscale, ccolor, distortion*.5, h+k);
             }
         }
     }
 
-    hue = fxrandom(0, .77);
-    var hue = fxrandom(.0, .7);
-    var sat = fxrandom(.4, .5);
-    var bri = fxrandom(.6, .97);
+    hue = map(fxrand(), 0, 1, 0, .77);
+    var hue = map(fxrand(), 0, 1, .0, .7);
+    var sat = map(fxrand(), 0, 1, .4, .5);
+    var bri = map(fxrand(), 0, 1, .6, .97);
     if(hue > 0.1 && hue < .45){
         sat *= .5;
     }
     for(var s = 0; s < paths.length; s++){
         let path = paths[s];
-        color = HSVtoRGB((hue + fxrandom(-.1, .1)+1.)%1, sat, bri);
-        if(fxrandom(0, 100) > 90){
-            var hue = fxrandom(.0, .7);
-            var sat = fxrandom(.4, .5);
-            var bri = fxrandom(.6, .97);
+        color = HSVtoRGB((hue + map(fxrand(), 0, 1, -.1, .1)+1.)%1, sat, bri);
+        if(map(fxrand(), 0, 1, 0, 100) > 90){
+            var hue = map(fxrand(), 0, 1, .0, .7);
+            var sat = map(fxrand(), 0, 1, .4, .5);
+            var bri = map(fxrand(), 0, 1, .6, .97);
             if(hue > 0.1 && hue < .45){
                 sat *= .5;
             }
         }
-        color = palette[Math.floor(fxrandom(0, palette.length))];
+        color = palette[Math.floor(map(fxrand(), 0, 1, 0, palette.length))];
         for(var k = 0; k < path.length; k++){
             const p1 = new THREE.Vector2(path[k].X, path[k].Y);
             const p2 = new THREE.Vector2(path[(k+1)%path.length].X, path[(k+1)%path.length].Y);
             const v = p1.clone().sub(p2).normalize();
-            p1.add(v.clone().multiplyScalar(fxrandom(0,overshoot))).add(centershift).multiplyScalar(scaw);
-            p2.add(v.clone().multiplyScalar(-fxrandom(0,overshoot))).add(centershift).multiplyScalar(scaw);
+            p1.add(v.clone().multiplyScalar(map(fxrand(), 0, 1, 0,overshoot))).add(centershift).multiplyScalar(scaw);
+            p2.add(v.clone().multiplyScalar(-map(fxrand(), 0, 1, 0,overshoot))).add(centershift).multiplyScalar(scaw);
             //drawLine(p1, p2, spread, pscale, color, distortion);
         }
     }
@@ -1842,28 +1860,28 @@ function polygonsStable(){
         /*var hatches = createHatch(clippedPath);
         for(var h = 0; h < hatches.length; h++){
             let path = hatches[h];
-            //color = HSVtoRGB(hue, sat+fxrandom(-.3, .0), bri+fxrandom(-.3, .0));
-            color = palette[Math.floor(fxrandom(0, palette.length))];
+            //color = HSVtoRGB(hue, sat+map(fxrand(), 0, 1, -.3, .0), bri+map(fxrand(), 0, 1, -.3, .0));
+            color = palette[Math.floor(map(fxrand(), 0, 1, 0, palette.length))];
             //color = palette[Math.floor(palette.length*h/hatches.length)];
-            var ccolor = [color[0]+fxrandom(-.1,.1), color[1]+fxrandom(-.1,.1), color[2]+fxrandom(-.1,.1)]
+            var ccolor = [color[0]+map(fxrand(), 0, 1, -.1,.1)*coshu, color[1]+map(fxrand(), 0, 1, -.1,.1)*coshu, color[2]+map(fxrand(), 0, 1, -.1,.1)*coshu]
             for(var rr = 0; rr < path.length; rr++){
                 const p1 = new THREE.Vector2(path[rr].X, path[rr].Y);
                 const p2 = new THREE.Vector2(path[(rr+1)%path.length].X, path[(rr+1)%path.length].Y);
                 const v = p1.clone().sub(p2).normalize();
-                p1.add(v.clone().multiplyScalar(fxrandom(0,0))).add(centershift).multiplyScalar(scaw);
-                p2.add(v.clone().multiplyScalar(-fxrandom(0,0))).add(centershift).multiplyScalar(scaw);
+                p1.add(v.clone().multiplyScalar(map(fxrand(), 0, 1, 0,0))).add(centershift).multiplyScalar(scaw);
+                p2.add(v.clone().multiplyScalar(-map(fxrand(), 0, 1, 0,0))).add(centershift).multiplyScalar(scaw);
                 //drawLine(p1, p2, spread, pscale, ccolor, distortion*.5, h+k);
             }
         }*/
 
-        color = palette[Math.floor(fxrandom(0, palette.length))];
-        color = [color[0]+fxrandom(-.1,.1), color[1]+fxrandom(-.1,.1), color[2]+fxrandom(-.1,.1)]
+        color = palette[Math.floor(map(fxrand(), 0, 1, 0, palette.length))];
+        color = [color[0]+map(fxrand(), 0, 1, -.1,.1)*coshu, color[1]+map(fxrand(), 0, 1, -.1,.1)*coshu, color[2]+map(fxrand(), 0, 1, -.1,.1)*coshu]
         for(var q = 0; q < clippedPath.length; q++){
             const p1 = new THREE.Vector2(clippedPath[q].X, clippedPath[q].Y);
             const p2 = new THREE.Vector2(clippedPath[(q+1)%clippedPath.length].X, clippedPath[(q+1)%clippedPath.length].Y);
             const v = p1.clone().sub(p2).normalize();
-            p1.add(v.clone().multiplyScalar(fxrandom(0,overshoot))).add(centershift).multiplyScalar(scaw);
-            p2.add(v.clone().multiplyScalar(-fxrandom(0,overshoot))).add(centershift).multiplyScalar(scaw);
+            p1.add(v.clone().multiplyScalar(map(fxrand(), 0, 1, 0,overshoot))).add(centershift).multiplyScalar(scaw);
+            p2.add(v.clone().multiplyScalar(-map(fxrand(), 0, 1, 0,overshoot))).add(centershift).multiplyScalar(scaw);
             //drawLine(p1, p2, spread, pscale, color, distortion);
         }
     }
@@ -1876,15 +1894,15 @@ function polygonsStable(){
 function midcube(){
     
     
-    var angle = radians(fxrandom(10, 50));
-    angle = radians(fxrandom(5, 88));
-    var shrt = fxrandom(.1, .5)*0+fxrandom(.4, 1.3)*1;
+    var angle = radians(map(fxrand(), 0, 1, 10, 50));
+    angle = radians(map(fxrand(), 0, 1, 5, 88));
+    var shrt = map(fxrand(), 0, 1, .1, .5)*0+map(fxrand(), 0, 1, .4, 1.3)*1;
     var cubesinfos = []
         
-    var x = fxrandom(-3, 3);
-    var y = fxrandom(-3, 3);
-    var cubewidth = fxrandom(155, 411);
-    var cubeheight = fxrandom(333, 400);
+    var x = map(fxrand(), 0, 1, -3, 3);
+    var y = map(fxrand(), 0, 1, -3, 3);
+    var cubewidth = map(fxrand(), 0, 1, 155, 411);
+    var cubeheight = map(fxrand(), 0, 1, 333, 400);
     cubesinfos.push({
         'x': x-cubewidth*shrt*Math.cos(angle)/2,
         'y': y-cubewidth*shrt*Math.sin(angle)/2,
@@ -1894,8 +1912,8 @@ function midcube(){
         's': shrt,
     });
 
-    var hue = fxrandom(.55, .56)*0;
-    var color = HSVtoRGB((hue+fxrandom(.45, .61))%1.0, fxrandom(.4, .6), fxrandom(.2, .5)*1);
+    var hue = map(fxrand(), 0, 1, .55, .56)*0;
+    var color = HSVtoRGB((hue+map(fxrand(), 0, 1, .45, .61))%1.0, map(fxrand(), 0, 1, .4, .6), map(fxrand(), 0, 1, .2, .5)*1);
     var pad = 18;
     var distortion = 15;
 
@@ -1915,8 +1933,8 @@ function midcube(){
         //outlineblack(cube, .05, .018, color, pad, 19);
     })
 
-    color = palette[Math.floor(fxrandom(0, palette.length))];
-    color = [color[0]+fxrandom(-.1,.1), color[1]+fxrandom(-.1,.1), color[2]+fxrandom(-.1,.1)]
+    color = palette[Math.floor(map(fxrand(), 0, 1, 0, palette.length))];
+    color = [color[0]+map(fxrand(), 0, 1, -.1,.1)*coshu, color[1]+map(fxrand(), 0, 1, -.1,.1)*coshu, color[2]+map(fxrand(), 0, 1, -.1,.1)*coshu]
     outline(cubesinfos, 1, 1, color, pad, distortion);
 }
 
@@ -1931,10 +1949,10 @@ function animate() {
     cubes();
     renderer.setRenderTarget(null);
     ffmesh.material.uniforms.tDiffuse.value = renderTarget.texture;
-    ffmesh.material.uniforms.resolution.value = [canvasWidth*window.devicePixelRatio, canvasHeight*window.devicePixelRatio];
+    ffmesh.material.uniforms.resolution.value = [baseWidth*window.devicePixelRatio, canvasHeight*window.devicePixelRatio];
     renderer.render(finalscene, camera);
 
-    //scratch(.4*fxrandom(-baseWidth/2, baseWidth/2), .4*fxrandom(-baseHeight/2, baseHeight/2));
+    //scratch(.4*map(fxrand(), 0, 1, -baseWidth/2, baseWidth/2), .4*map(fxrand(), 0, 1, -baseHeight/2, baseHeight/2));
     
 
     realfc++;
@@ -1948,7 +1966,7 @@ function animate() {
         var parts = dd/1.;
         var radius = 160;
         parts = radius*8;
-        var diff = [.01, fxrandom(.1, .3), fxrandom(.1, .3), 1.0];
+        var diff = [.01, map(fxrand(), 0, 1, .1, .3), map(fxrand(), 0, 1, .1, .3), 1.0];
         for(var k = 0; k < parts; k++){
             var p = map(k, 0, parts-1, 0, 1);
             //var x = x1 + p*(x2 - x1);
@@ -2032,23 +2050,50 @@ loader.load('assets/shaders/post.vert',function ( data ) {
 });
 
 var palettes0 = [
-    'f46036-5b85aa-414770-372248-171123',
+    'f4c7a4-e8e1ef-d9fff8-c7ffda-c4f4c7-9bb291',
+    'f46036-5b85aa-414770-372248',
     '084c61-db504a-e3b505-4f6d7a-56a3a6',
     '177e89-084c61-db3a34-ffc857-323031',
     '32373b-4a5859-f4d6cc-f4b860-c83e4d',
     'c0caad-9da9a0-654c4f-b26e63-cec075',
     'ac80a0-89aae6-3685b5-0471a6-061826',
-    'fbf5f3-e28413-000022-de3c4b-c42847',
+    'fbf5f3-e28413-de3c4b-c42847',
     'dceed1-aac0aa-736372-a18276-7a918d',
-    '12355b-420039-d72638-ffffff-ff570a',
-    'e8e1ef-d9fff8-c7ffda-c4f4c7-9bb291',
+    '12355b-420039-d72638-ff570a',
     '555b6e-89b0ae-bee3db-faf9f9-ffd6ba',
     'de6b48-e5b181-f4b9b2-daedbd-7dbbc3',
-    'f55d3e-878e88-f7cb15-ffffff-76bed0',
+    'f55d3e-878e88-f7cb15-76bed0',
     'fe5f55-f0b67f-d6d1b1-c7efcf-eef5db',
     'bfb48f-564e58-904e55-f2efe9-252627',
     'ba1200-031927-9dd1f1-508aa8-c8e0f4',
+    'ffbc42-df1129-bf2d16-218380-73d2de',
+    '1f363d-40798c-70a9a1-9ec1a3-cfe0c3',
+    'fa8334-fffd77-ffe882-388697-54405f',
+    'ed6a5a-f4f1bb-9bc1bc-e6ebe0-36c9c6',
+    '3e5641-a24936-d36135-282b28-83bca9',
+    '664c43-873d48-dc758f-e3d3e4-00ffcd',
+    '013a63-01497c-014f86-2a6f97-2c7da0-468faf-61a5c2-fa1603',
+    '304d7d-db995a-bbbbbb-222222-fdc300',
+    '8789c0-45f0df-c2cae8-8380b6-111d4a',
+    '006466-065a60-fb525b-144552-1b3a4b-212f45-272640-fb525b-312244-3e1f47-4d194d',
+    '003844-006c67-f194b4-ffb100-ffebc6',
+    '4d5057-4e6e5d-4da167-3bc14a-cfcfcf',
+    '007f5f-2b9348-55a630-80b918-aacc00-bfd200-d4d700-dddf00-eeef20-cf3311',
+    '5fad56-f2c14e-f78154-4d9078-b4431c',
 ]
+
+var palettesy = [
+    '007f5f-2b9348-55a630-80b918-aacc00-bfd200-d4d700-dddf00-eeef20-cf3311',
+]
+
+
+var palettesx = [
+    'c0caad-9da9a0-654c4f-b26e63-cec075-084c61-db504a-e3b505-f4c7a4-e8e1ef-d9fff8-664c43-873d48-dc758f-e3d3e4-00ffcd-c7ffda-c4f4c7-9bb291-3e5641-a24936-d36135-282b28-83bca9-4f6d7a-56a3a6-32373b-4a5859-f4d6cc-f4b860-c83e4d-ba1200-031927-9dd1f1-508aa8-c8e0f4-b84527-d2a467-e2af51-714c04-1f3c36-88beb6-4e2649-39160e-952709-975341-ffbc42-df1129-bf2d16-218380-73d2de'
+]
+
+if(verycolorful)
+    palettes0 = palettesx;
+    
 
 var palettes = [];
 palettes0.forEach(element => {
@@ -2071,7 +2116,7 @@ for(var k = 0; k < palettes.length; k++){
     cols.forEach((e)=>{caca.push(hexToRgb(e))});
     shuffle(caca)
     var coco = [];
-    caca.forEach((e, i)=>{coco.push([(caca[i][0]+.01*fxrandom(-.2, .2)), (caca[i][1]+.01*fxrandom(-.2, .2)), (caca[i][2]+.01*fxrandom(-.2, .2))])});
+    caca.forEach((e, i)=>{coco.push([(caca[i][0]+.3*map(fxrand(), 0, 1, -.2, .2)), (caca[i][1]+.3*map(fxrand(), 0, 1, -.2, .2)), (caca[i][2]+.3*map(fxrand(), 0, 1, -.2, .2))])});
     palettes[k] = coco;
 }
 
@@ -2079,25 +2124,26 @@ var palette;
 
 function reset(){
 
-    var thidx = Math.floor(fxrandom(0, palettes.length));
+    var thidx = Math.floor(map(fxrand(), 0, 1, 0, palettes.length));
     palette = palettes[thidx]
-    console.log(palettes0[thidx]);
+    shuffle(palette)
+    //console.log(palettes0[thidx]);
 
-    var ns = fxrandom(0, 100000);
+    var ns = map(fxrand(), 0, 1, 0, 100000);
     noiseSeed(ns);
     globalIndex = 0;
     scrollscale = 1.3;
     frameCount = 0;
-    offcl = [fxrandom(-18, 18), fxrandom(-18, 18), fxrandom(-18, 18)]
+    offcl = [map(fxrand(), 0, 1, -18, 18), map(fxrand(), 0, 1, -18, 18), map(fxrand(), 0, 1, -18, 18)]
     offcl = [0,0,0]
     seed = fxrand()*10000;
-    horizon = fxrandom(0.24, 0.93);
+    horizon = map(fxrand(), 0, 1, 0.24, 0.93);
 
     isDark = fxrand() < .08;
 
     hasSun = fxrand() < .5;
 
-    wind = fxrandom(-.4, +.4);
+    wind = map(fxrand(), 0, 1, -.4, +.4);
     if(fxrand() < .5)
         wind = 3.14 + wind;
 
@@ -2123,18 +2169,18 @@ function reset(){
     ww = canvasWidth
     wh = canvasHeight
 
-    let sxx = fxrandom(0.05, 0.95);
-    sunPos = [sxx, getHorizon(sxx*baseWidth)/baseHeight+fxrandom(-.0, .1)];
-    sunSpread = fxrandom(1.85, 1.85);
+    let sxx = map(fxrand(), 0, 1, 0.05, 0.95);
+    sunPos = [sxx, getHorizon(sxx*baseWidth)/baseHeight+map(fxrand(), 0, 1, -.0, .1)];
+    sunSpread = map(fxrand(), 0, 1, 1.85, 1.85);
 
 
-    var hsv = [Math.pow(fxrandom(0.0, 0.9), 2), fxrandom(0.2, 0.56), fxrandom(0.3, 0.76)]
+    var hsv = [Math.pow(map(fxrand(), 0, 1, 0.0, 0.9), 2), map(fxrand(), 0, 1, 0.2, 0.56), map(fxrand(), 0, 1, 0.3, 0.76)]
     if(hsv[0] > 0.05){
-        hsv[1] = fxrandom(0.14, 0.315)
-        //hsv[2] = fxrandom(0.2, 0.8)
+        hsv[1] = map(fxrand(), 0, 1, 0.14, 0.315)
+        //hsv[2] = map(fxrand(), 0, 1, 0.2, 0.8)
     }
     if(sunPos[1] > horizon){
-        //hsv[2] = fxrandom(0.4, 0.7)
+        //hsv[2] = map(fxrand(), 0, 1, 0.4, 0.7)
     }
 
     if(isDark){
@@ -2144,12 +2190,12 @@ function reset(){
     backgroundColor = HSLtoRGB(hsv[0], hsv[1], hsv[2])
 
     //while(myDot(backgroundColor, [0,1,0]) > 0.5){
-    //    hsv = [Math.pow(fxrand()*.5, 2), fxrandom(0.2, 0.36), fxrandom(0.5, 0.7)]
+    //    hsv = [Math.pow(fxrand()*.5, 2), map(fxrand(), 0, 1, 0.2, 0.36), map(fxrand(), 0, 1, 0.5, 0.7)]
     //    backgroundColor = HSVtoRGB(hsv[0], hsv[1], hsv[2])
     //}
     //backgroundColor[2] = Math.pow(backgroundColor[2], .6)
     
-    sunColor = [fxrandom(0.992, 1.036)%1.0, fxrandom(0.9, .96), fxrandom(.8, 1.0)]
+    sunColor = [map(fxrand(), 0, 1, 0.992, 1.036)%1.0, map(fxrand(), 0, 1, 0.9, .96), map(fxrand(), 0, 1, .8, 1.0)]
     if(sunColor[0] > .13 && sunColor[0] < .98){
         //sunColor[1] *= .7;
         //sunColor[2] *= .7;
@@ -2157,14 +2203,14 @@ function reset(){
     sunColor = HSVtoRGB(sunColor[0], sunColor[1], sunColor[2]);
     sunColor = [255.*sunColor[0], 255.*sunColor[1], 255.*sunColor[2]]
     if(isDark){
-        sunColor = HSLtoRGB(fxrandom(0.5, .7), fxrandom(0.1, .2), fxrandom(.4, .6));
+        sunColor = HSLtoRGB(map(fxrand(), 0, 1, 0.5, .7), map(fxrand(), 0, 1, 0.1, .2), map(fxrand(), 0, 1, .4, .6));
         sunColor = [255.*sunColor[0], 255.*sunColor[1], 255.*sunColor[2]]
-        sunPos[1] = fxrandom(-.4, -.3);
-        sunSpread = fxrandom(1.1, 1.1);
+        sunPos[1] = map(fxrand(), 0, 1, -.4, -.3);
+        sunSpread = map(fxrand(), 0, 1, 1.1, 1.1);
     }
     //sunColor = [255.*Math.pow(backgroundColor[0], .35), 255.*Math.pow(backgroundColor[1], 2.3), 255.*Math.pow(backgroundColor[2], 2.3)]
     if((backgroundColor[0]+backgroundColor[1]+backgroundColor[2])/3 < .35){
-        //sunColor = HSVtoRGB(fxrandom(0.4, .61), fxrandom(0.2, .34), fxrandom(.6, 1.0));
+        //sunColor = HSVtoRGB(map(fxrand(), 0, 1, 0.4, .61), map(fxrand(), 0, 1, 0.2, .34), map(fxrand(), 0, 1, .6, 1.0));
         //sunColor = [255.*sunColor[0], 255.*sunColor[1], 255.*sunColor[2]]
     }
 
@@ -2201,39 +2247,39 @@ function generateBrush(){
     var radi = .24;
     var strands = 2333;
     for(var k = 0; k < strands; k++){
-        var ang = fxrandom(0, 2*3.14159);
+        var ang = map(fxrand(), 0, 1, 0, 2*3.14159);
         var rad = map(Math.sqrt(fxrand()), 0, 1, 0, radi);
         var x = rad*Math.cos(ang);
         var y = rad*Math.sin(ang);
 
         var col = [
-            groundclr.a[0] + 4*fxrandom(-groundclr.ad[0], +groundclr.ad[0]),
-            groundclr.a[1] + 4*fxrandom(-groundclr.ad[1], +groundclr.ad[1]),
-            groundclr.a[2] + 4*fxrandom(-groundclr.ad[2], +groundclr.ad[2]),
+            groundclr.a[0] + 4*map(fxrand(), 0, 1, -groundclr.ad[0], +groundclr.ad[0]),
+            groundclr.a[1] + 4*map(fxrand(), 0, 1, -groundclr.ad[1], +groundclr.ad[1]),
+            groundclr.a[2] + 4*map(fxrand(), 0, 1, -groundclr.ad[2], +groundclr.ad[2]),
             255.
         ]
 
 
         col = [
-            treeclr.a[0] + 2*fxrandom(-treeclr.ad[0], +treeclr.ad[0]),
-            treeclr.a[1] + 2*fxrandom(-treeclr.ad[1], +treeclr.ad[1]),
-            treeclr.a[2] + 2*fxrandom(-treeclr.ad[2], +treeclr.ad[2]),
-            fxrandom(0, 255)
+            treeclr.a[0] + 2*map(fxrand(), 0, 1, -treeclr.ad[0], +treeclr.ad[0]),
+            treeclr.a[1] + 2*map(fxrand(), 0, 1, -treeclr.ad[1], +treeclr.ad[1]),
+            treeclr.a[2] + 2*map(fxrand(), 0, 1, -treeclr.ad[2], +treeclr.ad[2]),
+            map(fxrand(), 0, 1, 0, 255)
         ]
 
-        var bb = fxrandom(1, 255);
+        var bb = map(fxrand(), 0, 1, 1, 255);
         col = [
             bb,
             bb,
             bb,
-            fxrandom(33, 44)
+            map(fxrand(), 0, 1, 33, 44)
         ]
 
-        var rrr = fxrandom(1, 4);
+        var rrr = map(fxrand(), 0, 1, 1, 4);
         particlePositions.push(x, y, 0);
         particleColors.push(col[0]/255., col[1]/255., col[2]/255., col[3]/255.);
         particleSizes.push(rrr, rrr);
-        particleAngles.push(fxrandom(0, 2*3.14159));
+        particleAngles.push(map(fxrand(), 0, 1, 0, 2*3.14159));
         particleIndices.push(k);
     }
 }
@@ -2304,7 +2350,7 @@ function loadData(){
         u_diffuse: { value: [0, 0, 0, 1] },
         u_scrollscale: { value: scrollscale },
         u_winscale: { value: 4. },
-        u_seed: fxrandom(1000.),
+        u_seed: map(fxrand(), 0, 1, 1000.),
     };
 
 
@@ -2332,11 +2378,11 @@ function loadData(){
     if(ff)
         renderer = new THREE.WebGLRenderer({alpha: true, preserveDrawingBuffer: true});
 
-    renderTarget = new THREE.WebGLRenderTarget(canvasWidth*window.devicePixelRatio, canvasHeight*window.devicePixelRatio);
+    renderTarget = new THREE.WebGLRenderTarget(baseWidth*window.devicePixelRatio, baseHeight*window.devicePixelRatio);
 
     finalscene = new THREE.Scene();
 
-    ffgeometry = new THREE.PlaneGeometry(canvasWidth/winScale, canvasHeight/winScale);
+    ffgeometry = new THREE.PlaneGeometry(baseWidth/winScale, baseHeight/winScale);
     
     ffmaterial = new THREE.ShaderMaterial({
         uniforms: PostProcShader.uniforms,
@@ -2378,9 +2424,18 @@ function loadData(){
     //luminosityPass = new ShaderPass( PostProcShader );
     //composer.render();
     renderer.setRenderTarget(renderTarget);
-    renderer.setClearColor( new THREE.Color(palette[0][0], palette[0][1], palette[0][2]), 1 );
+
+    var r1 = palette[0][0];
+    var g1 = palette[0][1];
+    var b1 = palette[0][2];
+    var r2 = .5;
+    var g2 = .5;
+    var b2 = .5;
+    var p = .85;
+
+    renderer.setClearColor( new THREE.Color(r1*p+(1-p)*r2, g1*p+(1-p)*g2, b1*p+(1-p)*b2), 1 );
     renderer.render(scene, camera);
-    renderer.setClearColor( new THREE.Color(palette[0][0], palette[0][1], palette[0][2]), 1 );
+    renderer.setClearColor( new THREE.Color(r1*p+(1-p)*r2, g1*p+(1-p)*g2, b1*p+(1-p)*b2), 1 );
     renderer.clear();
     //animate();
     cubes();
@@ -2390,7 +2445,7 @@ function loadData(){
     ffmesh.material.uniforms.resolution.value = [canvasWidth*window.devicePixelRatio, canvasHeight*window.devicePixelRatio];
     renderer.render(finalscene, camera);
 
-    //scratch(.4*fxrandom(-baseWidth/2, baseWidth/2), .4*fxrandom(-baseHeight/2, baseHeight/2));
+    //scratch(.4*map(fxrand(), 0, 1, -baseWidth/2, baseWidth/2), .4*map(fxrand(), 0, 1, -baseHeight/2, baseHeight/2));
     
     //midcube();
     //kdtree();
@@ -2404,8 +2459,7 @@ function loadData(){
     //renderer.setRenderTarget(null);
     //renderer.render(finalscene, camera);
     //renderer.render( scene, camera );
-    if(isFxpreview)
-        fxpreview();
+    fxpreview();
     //console.log('hash:', fxhash);
     //window.addEventListener( 'resize', onWindowResize );
     
@@ -2418,10 +2472,10 @@ function loadData(){
         isdown = true; 
         mouseprev.x = mouse.x; 
         mouseprev.y = mouse.y; 
-        var mmm = HSVtoRGB(fxrandom(.0004, .05), fxrandom(.4, .8), fxrandom(.7, .7));
-        var mmm = HSVtoRGB(fxrandom(.0004, .05), fxrandom(.1, .6), fxrandom(.1, .6));
+        var mmm = HSVtoRGB(map(fxrand(), 0, 1, .0004, .05), map(fxrand(), 0, 1, .4, .8), map(fxrand(), 0, 1, .7, .7));
+        var mmm = HSVtoRGB(map(fxrand(), 0, 1, .0004, .05), map(fxrand(), 0, 1, .1, .6), map(fxrand(), 0, 1, .1, .6));
         if(fxrand()>-.5)
-            mmm = HSVtoRGB(fxrandom(.006, .991), fxrandom(.1, .6), fxrandom(.1, .8));
+            mmm = HSVtoRGB(map(fxrand(), 0, 1, .006, .991), map(fxrand(), 0, 1, .1, .6), map(fxrand(), 0, 1, .1, .8));
 
         var mx = event.clientX - (window.innerWidth - canvasWidth)/2;
         var my = event.clientY - (window.innerHeight - canvasHeight)/2;
@@ -2462,8 +2516,8 @@ function repositionCanvas(canvas){
 
 var cnt = 0
 
-var shft = fxrandom(0.6, 1.05)%1.0;
-var shft2 = fxrandom(0.0, 1.0)%1.0;
+var shft = map(fxrand(), 0, 1, 0.6, 1.05)%1.0;
+var shft2 = map(fxrand(), 0, 1, 0.0, 1.0)%1.0;
 var hasAtt = fxrand() < .5;
 
 
